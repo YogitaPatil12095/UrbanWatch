@@ -1,0 +1,137 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-dark-900 text-slate-200;
+  }
+}
+
+@layer components {
+  /* Glassmorphism card */
+  .glass-card {
+    @apply bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl;
+  }
+
+  /* Neon border glow */
+  .neon-border-blue {
+    box-shadow: 0 0 0 1px #00d4ff44, inset 0 0 20px #00d4ff08;
+    border-color: #00d4ff44;
+  }
+
+  .neon-border-pink {
+    box-shadow: 0 0 0 1px #ff006e44, inset 0 0 20px #ff006e08;
+    border-color: #ff006e44;
+  }
+
+  /* Neon text */
+  .neon-text-blue {
+    color: #00d4ff;
+    text-shadow: 0 0 10px #00d4ff88;
+  }
+
+  .neon-text-pink {
+    color: #ff006e;
+    text-shadow: 0 0 10px #ff006e88;
+  }
+
+  .neon-text-green {
+    color: #00ff88;
+    text-shadow: 0 0 10px #00ff8888;
+  }
+
+  /* Gradient text */
+  .gradient-text {
+    @apply bg-clip-text text-transparent;
+    background-image: linear-gradient(135deg, #00d4ff, #ff006e);
+  }
+
+  /* Button styles */
+  .btn-primary {
+    @apply px-6 py-3 rounded-xl font-semibold text-sm transition-all duration-300;
+    background: linear-gradient(135deg, #00d4ff22, #ff006e22);
+    border: 1px solid #00d4ff44;
+    color: #00d4ff;
+  }
+
+  .btn-primary:hover {
+    background: linear-gradient(135deg, #00d4ff44, #ff006e44);
+    box-shadow: 0 0 20px #00d4ff44;
+    transform: translateY(-1px);
+  }
+
+  .btn-danger {
+    @apply px-6 py-3 rounded-xl font-semibold text-sm transition-all duration-300;
+    background: linear-gradient(135deg, #ff006e22, #ff006e44);
+    border: 1px solid #ff006e44;
+    color: #ff006e;
+  }
+
+  /* Input styles */
+  .input-dark {
+    @apply w-full px-4 py-3 rounded-xl text-sm text-slate-200 outline-none transition-all duration-300;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .input-dark:focus {
+    border-color: #00d4ff44;
+    box-shadow: 0 0 0 3px #00d4ff11;
+  }
+
+  .input-dark::placeholder {
+    color: rgba(148, 163, 184, 0.5);
+  }
+
+  /* Scan line animation */
+  .scan-line {
+    position: absolute;
+    width: 100%;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, #00d4ff44, transparent);
+    animation: scan 4s linear infinite;
+    pointer-events: none;
+  }
+}
+
+/* Leaflet overrides for dark theme */
+.leaflet-container {
+  background: #050810 !important;
+}
+.leaflet-control-zoom a {
+  background: #0f1629 !important;
+  color: #00d4ff !important;
+  border-color: #00d4ff33 !important;
+}
+.leaflet-control-zoom a:hover {
+  background: #00d4ff22 !important;
+}
+.leaflet-bar {
+  border: 1px solid #00d4ff33 !important;
+  box-shadow: 0 0 10px #00d4ff11 !important;
+}
+.leaflet-popup-content-wrapper {
+  background: #0f1629;
+  border: 1px solid #00d4ff33;
+  color: #e2e8f0;
+  border-radius: 12px;
+}
+.leaflet-popup-tip { background: #0f1629; }
+
+/* Range slider */
+.range-slider-track {
+  background: linear-gradient(90deg, #00d4ff, #ff006e) !important;
+}
+
+/* React compare slider */
+.react-compare-slider-handle {
+  background: linear-gradient(180deg, #00d4ff, #ff006e) !important;
+  width: 3px !important;
+}
+
+/* Custom scrollbar for panels */
+.panel-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: #00d4ff44 transparent;
+}

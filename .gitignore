@@ -1,0 +1,20 @@
+# Node
+node_modules/
+urbanwatch-ai/frontend/node_modules/
+urbanwatch-ai/frontend/build/
+urbanwatch-ai/frontend/.env
+
+# Python
+urbanwatch-ai/backend/venv/
+urbanwatch-ai/backend/static/images/
+urbanwatch-ai/backend/.env
+urbanwatch-ai/backend/gee-key.json
+__pycache__/
+**/__pycache__/
+*.pyc
+*.pyo
+
+# OS
+.DS_Store
+Thumbs.db
+*.log
