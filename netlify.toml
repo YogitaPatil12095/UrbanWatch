@@ -1,6 +1,5 @@
 [build]
-  base = "urbanwatch-ai/frontend"
-  command = "npm run build"
+  command = "cd urbanwatch-ai/frontend && npm install && npm run build"
   publish = "urbanwatch-ai/frontend/build"
 
 [build.environment]
