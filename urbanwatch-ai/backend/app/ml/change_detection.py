@@ -240,27 +240,34 @@ def _run_unet(model, img_before: np.ndarray, img_after: np.ndarray) -> dict:
 
 
 def save_change_map(result: dict, cache_key: str) -> str:
-    """Save change map image and return URL path."""
-    # Use explicit key checks — avoid `or` on numpy arrays
+    """Save change map image as a vivid RGBA overlay PNG."""
     seg = result.get("segmentation")
-    if seg is None:
-        seg = result.get("diff")
-    if seg is None:
-        return ""
+    diff = result.get("diff")
 
-    if seg.ndim == 2:
-        # Colorize grayscale diff using a jet-like palette via PIL
-        norm = seg.astype(np.float32) / 255.0
-        r = np.clip(1.5 - np.abs(norm * 4 - 3), 0, 1)
-        g = np.clip(1.5 - np.abs(norm * 4 - 2), 0, 1)
-        b = np.clip(1.5 - np.abs(norm * 4 - 1), 0, 1)
+    if seg is not None and seg.ndim == 3:
+        # Use segmentation colors directly
+        colored = seg.astype(np.uint8)
+    elif diff is not None:
+        # Colorize grayscale diff: blue (low) → yellow → red (high)
+        d = diff.astype(np.float32) / 255.0
+        r = np.clip(d * 2.5, 0, 1)
+        g = np.clip(1.0 - np.abs(d - 0.4) * 3, 0, 1)
+        b = np.clip(1.0 - d * 3, 0, 1)
         colored = (np.stack([r, g, b], axis=2) * 255).astype(np.uint8)
     else:
-        colored = seg
+        return ""
+
+    # Alpha: transparent where no change, opaque where change detected
+    if diff is not None:
+        alpha = np.clip(diff.astype(np.float32) / 255.0 * 2.5, 0, 1)
+        alpha = (alpha * 200).astype(np.uint8)
+    else:
+        gray = colored.mean(axis=2)
+        alpha = np.clip(gray / 255.0 * 200, 0, 200).astype(np.uint8)
 
     rgba = np.zeros((*colored.shape[:2], 4), dtype=np.uint8)
     rgba[:, :, :3] = colored
-    rgba[:, :, 3]  = (colored.sum(axis=2) > 0).astype(np.uint8) * 180
+    rgba[:, :, 3]  = alpha
 
     img = Image.fromarray(rgba, "RGBA")
     path = STATIC_DIR / f"change_{cache_key}.png"

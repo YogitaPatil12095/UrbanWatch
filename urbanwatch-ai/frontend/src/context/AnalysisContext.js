@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useCallback } from "react";
 import toast from "react-hot-toast";
-import { runFullAnalysis } from "../utils/api";
+import { runFullAnalysis, fetchRealStats } from "../utils/api";
 
 const AnalysisContext = createContext(null);
 
@@ -12,6 +12,7 @@ export function AnalysisProvider({ children }) {
 
   // All analysis results from /analyze
   const [result, setResult]       = useState(null);
+  const [realStats, setRealStats] = useState(null);
   const [alerts, setAlerts]       = useState([]);
   const [loading, setLoading]     = useState(false);
   const [loadingStep, setLoadingStep] = useState("");
@@ -37,6 +38,7 @@ export function AnalysisProvider({ children }) {
     setAnalysisComplete(false);
     setAlerts([]);
     setResult(null);
+    setRealStats(null);
 
     const steps = [
       "Fetching satellite imagery...",
@@ -46,7 +48,7 @@ export function AnalysisProvider({ children }) {
       "Z-Score anomaly detection...",
       "PCA change vector analysis...",
       "Edge detection & infrastructure mapping...",
-      "Computing risk score...",
+      "Fetching real OSM + NASA data...",
     ];
 
     let stepIdx = 0;
@@ -67,6 +69,22 @@ export function AnalysisProvider({ children }) {
       });
 
       setResult(data);
+
+      // Fetch real verified stats from OSM + NASA in parallel
+      try {
+        const real = await fetchRealStats(location.lat, location.lon, yearFrom, yearTo);
+        setRealStats(real);
+        // Override ML estimates with real data where available
+        if (real.ndvi_delta !== undefined) {
+          data.ndvi_delta = real.ndvi_delta;
+          data.ndvi_mean_after = real.ndvi_to;
+        }
+        if (real.urban_expansion_pct > 0) data.urban_pct = real.urban_expansion_pct;
+        if (real.vegetation_loss_pct > 0) data.vegetation_pct = real.vegetation_loss_pct;
+        setResult({ ...data });
+      } catch (e) {
+        console.warn("Real stats fetch failed, using ML estimates", e);
+      }
 
       // Smart alerts
       const newAlerts = [];
@@ -102,7 +120,7 @@ export function AnalysisProvider({ children }) {
       yearFrom, setYearFrom,
       yearTo, setYearTo,
       mode, setMode,
-      result, imageFrom, imageTo, changeMap, stats, alerts,
+      result, realStats, imageFrom, imageTo, changeMap, stats, alerts,
       loading, loadingStep, analysisComplete,
       runAnalysis,
     }}>

@@ -8,6 +8,16 @@ const api = axios.create({
 });
 
 /**
+ * Fetch real verified stats from OSM + NASA MODIS
+ */
+export async function fetchRealStats(lat, lon, yearFrom, yearTo) {
+  const res = await api.get("/real-stats", {
+    params: { lat, lon, year_from: yearFrom, year_to: yearTo },
+  });
+  return res.data;
+}
+
+/**
  * Run full ML analysis pipeline (all techniques)
  */
 export async function runFullAnalysis(payload) {

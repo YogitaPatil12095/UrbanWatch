@@ -31,7 +31,41 @@ function ClickHandler({ onMapClick }) {
   return null;
 }
 
-function HeatmapOverlay({ location, visible, points }) {
+function RealChangeOverlay({ location, changeMapUrl, visible }) {
+  const map = useMap();
+  const overlayRef = useRef(null);
+  const API_URL = process.env.REACT_APP_API_URL || "http://localhost:8000";
+
+  useEffect(() => {
+    if (!visible || !location || !changeMapUrl) {
+      if (overlayRef.current) { map.removeLayer(overlayRef.current); overlayRef.current = null; }
+      return;
+    }
+    if (overlayRef.current) map.removeLayer(overlayRef.current);
+
+    // Calculate bounding box from tile zoom 8 (matches backend tile fetch)
+    // Each tile at zoom 8 in EPSG4326 covers 360/256 = 1.40625° lon, 180/128 = 1.40625° lat
+    const tileSize = 1.40625; // degrees per tile at zoom 8
+    const bounds = [
+      [location.lat - tileSize * 1.5, location.lon - tileSize * 1.5],
+      [location.lat + tileSize * 1.5, location.lon + tileSize * 1.5],
+    ];
+
+    const imageUrl = `${API_URL}${changeMapUrl}`;
+    overlayRef.current = L.imageOverlay(imageUrl, bounds, {
+      opacity: 0.6,
+      interactive: false,
+      className: "change-map-overlay",
+    });
+    map.addLayer(overlayRef.current);
+
+    return () => {
+      if (overlayRef.current) { map.removeLayer(overlayRef.current); overlayRef.current = null; }
+    };
+  }, [map, location, changeMapUrl, visible, API_URL]);
+
+  return null;
+}
   const map = useMap();
   const canvasRef = useRef(null);
   const layerRef = useRef(null);
@@ -96,7 +130,7 @@ function HeatmapOverlay({ location, visible, points }) {
 }
 
 export default function MapView() {
-  const { location, setLocation, analysisComplete, result } = useAnalysis();
+  const { location, setLocation, analysisComplete, result, changeMap } = useAnalysis();
   const [showOverlay, setShowOverlay] = React.useState(true);
 
   // Build heatmap points from REAL analysis stats
@@ -145,11 +179,18 @@ export default function MapView() {
           </>
         )}
         {analysisComplete && (
-          <HeatmapOverlay
-            location={location}
-            visible={showOverlay}
-            points={heatmapPoints}
-          />
+          <>
+            <RealChangeOverlay
+              location={location}
+              changeMapUrl={changeMap}
+              visible={showOverlay}
+            />
+            <HeatmapOverlay
+              location={location}
+              visible={showOverlay}
+              points={heatmapPoints}
+            />
+          </>
         )}
       </MapContainer>
 

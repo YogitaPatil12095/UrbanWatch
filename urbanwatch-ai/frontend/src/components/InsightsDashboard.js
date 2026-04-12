@@ -6,6 +6,7 @@ import {
   ResponsiveContainer, PieChart, Pie, Cell, Legend,
 } from "recharts";
 import { useAnalysis } from "../context/AnalysisContext";
+import RealDataPanel from "./RealDataPanel";
 
 const API_URL = process.env.REACT_APP_API_URL || "http://localhost:8000";
 
@@ -156,6 +157,9 @@ export default function InsightsDashboard() {
           sub={`+${result.increase_pct.toFixed(1)}% increase / -${result.decrease_pct.toFixed(1)}% decrease`} />
         <StatCard index={3} icon="🏗️" label="Infra Growth" value={result.infra_growth_pct > 0 ? "+" + result.infra_growth_pct.toFixed(1) : result.infra_growth_pct.toFixed(1)} unit="%" color="#a78bfa" />
       </div>
+
+      {/* Real verified data panel */}
+      <RealDataPanel />
 
       {/* Spectral indices row */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
