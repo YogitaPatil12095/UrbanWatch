@@ -2,107 +2,122 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --navy:      #0A192F;
+  --navy-l:    #112240;
+  --navy-d:    #060F1E;
+  --teal:      #64FFDA;
+  --teal-dim:  #3DBFA3;
+  --lav:       #CCD6F6;
+  --lav-dim:   #8892B0;
+  --coral:     #FF6B6B;
+  --font-main: 'Sansation', 'Segoe UI', sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+}
+
 @layer base {
-  body {
-    background-color: #1A1A2E;
-    color: #F5F0EB;
-  }
+  body { background: var(--navy); color: var(--lav); font-family: var(--font-main); }
+  * { font-family: var(--font-main); }
+  code, pre, .font-mono { font-family: var(--font-mono) !important; }
 }
 
 @layer components {
-  /* Glassmorphism card */
-  .glass-card {
-    @apply backdrop-blur-md rounded-2xl;
-    background: rgba(45, 45, 74, 0.5);
-    border: 1px solid rgba(233, 69, 96, 0.15);
+  .card {
+    background: rgba(17, 34, 64, 0.8);
+    border: 1px solid rgba(100, 255, 218, 0.1);
+    border-radius: 12px;
+    backdrop-filter: blur(10px);
   }
-
-  /* Neon border — now uses brand accent */
-  .neon-border-blue {
-    box-shadow: 0 0 0 1px rgba(233,69,96,0.35), inset 0 0 20px rgba(233,69,96,0.05);
-    border-color: rgba(233,69,96,0.35);
+  .card-hover:hover {
+    border-color: rgba(100, 255, 218, 0.25);
+    background: rgba(17, 34, 64, 0.95);
   }
-
-  .neon-border-pink {
-    box-shadow: 0 0 0 1px rgba(255,107,122,0.35), inset 0 0 20px rgba(255,107,122,0.05);
-    border-color: rgba(255,107,122,0.35);
-  }
-
-  /* Text accents */
-  .neon-text-blue  { color: #E94560; text-shadow: 0 0 10px rgba(233,69,96,0.6); }
-  .neon-text-pink  { color: #FF6B7A; text-shadow: 0 0 10px rgba(255,107,122,0.6); }
-  .neon-text-green { color: #16A085; text-shadow: 0 0 10px rgba(22,160,133,0.6); }
-
-  /* Gradient text */
   .gradient-text {
-    @apply bg-clip-text text-transparent;
-    background-image: linear-gradient(135deg, #E94560, #FF6B7A);
+    background: linear-gradient(135deg, #64FFDA, #CCD6F6);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
   }
-
-  /* Buttons */
   .btn-primary {
-    @apply px-6 py-3 rounded-xl font-semibold text-sm transition-all duration-300;
-    background: linear-gradient(135deg, rgba(233,69,96,0.2), rgba(255,107,122,0.1));
-    border: 1px solid rgba(233,69,96,0.4);
-    color: #FF6B7A;
+    background: transparent;
+    border: 1px solid var(--teal);
+    color: var(--teal);
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-family: var(--font-main);
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    transition: all 0.2s;
   }
   .btn-primary:hover {
-    background: linear-gradient(135deg, rgba(233,69,96,0.4), rgba(255,107,122,0.3));
-    box-shadow: 0 0 20px rgba(233,69,96,0.3);
+    background: rgba(100, 255, 218, 0.1);
+    box-shadow: 0 0 16px rgba(100, 255, 218, 0.2);
+  }
+  .btn-accent {
+    background: linear-gradient(135deg, #64FFDA, #3DBFA3);
+    color: #0A192F;
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-family: var(--font-main);
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    transition: all 0.2s;
+    border: none;
+  }
+  .btn-accent:hover {
+    box-shadow: 0 4px 20px rgba(100, 255, 218, 0.4);
     transform: translateY(-1px);
   }
-
-  /* Inputs */
-  .input-dark {
-    @apply w-full px-4 py-3 rounded-xl text-sm outline-none transition-all duration-300;
-    background: rgba(45, 45, 74, 0.6);
-    border: 1px solid rgba(233, 69, 96, 0.2);
-    color: #F5F0EB;
-  }
-  .input-dark:focus {
-    border-color: rgba(233,69,96,0.5);
-    box-shadow: 0 0 0 3px rgba(233,69,96,0.1);
-  }
-  .input-dark::placeholder { color: rgba(245,240,235,0.35); }
-
-  /* Scan line */
-  .scan-line {
-    position: absolute;
+  .input-field {
+    background: rgba(6, 15, 30, 0.7);
+    border: 1px solid rgba(100, 255, 218, 0.15);
+    border-radius: 8px;
+    color: var(--lav);
+    padding: 10px 14px;
+    font-family: var(--font-main);
+    font-size: 13px;
+    outline: none;
     width: 100%;
-    height: 2px;
-    background: linear-gradient(90deg, transparent, rgba(233,69,96,0.4), transparent);
-    animation: scan 4s linear infinite;
-    pointer-events: none;
+    transition: border-color 0.2s;
   }
+  .input-field:focus {
+    border-color: rgba(100, 255, 218, 0.4);
+    box-shadow: 0 0 0 3px rgba(100, 255, 218, 0.06);
+  }
+  .input-field::placeholder { color: rgba(136, 146, 176, 0.5); }
+  .section-label {
+    font-size: 10px;
+    font-family: var(--font-mono);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--teal);
+    opacity: 0.7;
+  }
+  .panel-scroll {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(100,255,218,0.2) transparent;
+  }
+  /* glass-card alias for backward compat */
+  .glass-card { @apply card; }
 }
 
-/* Leaflet dark overrides */
-.leaflet-container { background: #0F0F1A !important; }
+/* Leaflet overrides */
+.leaflet-container { background: #060F1E !important; }
 .leaflet-control-zoom a {
-  background: #1A1A2E !important;
-  color: #E94560 !important;
-  border-color: rgba(233,69,96,0.3) !important;
+  background: #112240 !important;
+  color: #64FFDA !important;
+  border-color: rgba(100,255,218,0.2) !important;
+  font-family: var(--font-mono) !important;
 }
-.leaflet-control-zoom a:hover { background: rgba(233,69,96,0.15) !important; }
-.leaflet-bar {
-  border: 1px solid rgba(233,69,96,0.3) !important;
-  box-shadow: 0 0 10px rgba(233,69,96,0.1) !important;
-}
+.leaflet-control-zoom a:hover { background: rgba(100,255,218,0.1) !important; }
+.leaflet-bar { border: 1px solid rgba(100,255,218,0.2) !important; box-shadow: none !important; }
 .leaflet-popup-content-wrapper {
-  background: #2D2D4A;
-  border: 1px solid rgba(233,69,96,0.3);
-  color: #F5F0EB;
-  border-radius: 12px;
+  background: #112240;
+  border: 1px solid rgba(100,255,218,0.2);
+  color: #CCD6F6;
+  border-radius: 10px;
+  font-family: var(--font-main);
 }
-.leaflet-popup-tip { background: #2D2D4A; }
-
-/* Scrollbar */
-::-webkit-scrollbar { width: 6px; }
-::-webkit-scrollbar-track { background: #0F0F1A; }
-::-webkit-scrollbar-thumb { background: rgba(233,69,96,0.35); border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: rgba(233,69,96,0.6); }
-
-.panel-scroll {
-  scrollbar-width: thin;
-  scrollbar-color: rgba(233,69,96,0.35) transparent;
-}
+.leaflet-popup-tip { background: #112240; }

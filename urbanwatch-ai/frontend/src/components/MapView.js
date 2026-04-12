@@ -101,11 +101,11 @@ function HeatmapOverlay({ location, visible, points }) {
           const r = 30 + intensity * 40;
           const grad = ctx.createRadialGradient(pt.x, pt.y, 0, pt.x, pt.y, r);
           if (intensity > 0.5) {
-            grad.addColorStop(0, `rgba(233,69,96,${intensity * 0.75})`);
-            grad.addColorStop(1, "rgba(233,69,96,0)");
+            grad.addColorStop(0, `rgba(255,107,107,${intensity * 0.75})`);
+            grad.addColorStop(1, "rgba(255,107,107,0)");
           } else {
-            grad.addColorStop(0, `rgba(22,160,133,${intensity * 0.65})`);
-            grad.addColorStop(1, "rgba(22,160,133,0)");
+            grad.addColorStop(0, `rgba(100,255,218,${intensity * 0.65})`);
+            grad.addColorStop(1, "rgba(100,255,218,0)");
           }
           ctx.fillStyle = grad;
           ctx.beginPath();
@@ -185,8 +185,8 @@ export default function MapView() {
             onClick={() => setShowOverlay((v) => !v)}
             className="px-3 py-1.5 rounded-lg text-xs font-mono border transition-all"
             style={showOverlay
-              ? {background:"rgba(233,69,96,0.15)",borderColor:"rgba(233,69,96,0.4)",color:"#E94560"}
-              : {background:"rgba(26,26,46,0.8)",borderColor:"rgba(233,69,96,0.15)",color:"rgba(245,240,235,0.4)"}}
+              ? {background:"rgba(100,255,218,0.1)",borderColor:"rgba(100,255,218,0.3)",color:"#64FFDA"}
+              : {background:"rgba(6,15,30,0.8)",borderColor:"rgba(100,255,218,0.1)",color:"rgba(136,146,176,0.5)"}}
           >
             {showOverlay ? "🔥 Hide Heatmap" : "🔥 Show Heatmap"}
           </motion.button>
@@ -195,11 +195,11 @@ export default function MapView() {
 
       {!location && (
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-[500]">
-          <div className="px-6 py-4 text-center rounded-2xl"
-            style={{background:"rgba(26,26,46,0.85)",border:"1px solid rgba(233,69,96,0.2)",backdropFilter:"blur(12px)"}}>
-            <div className="text-2xl mb-2">🛰️</div>
-            <p className="text-sm font-mono" style={{color:"rgba(245,240,235,0.6)"}}>Click anywhere to select a location</p>
-            <p className="text-xs font-mono mt-1" style={{color:"rgba(233,69,96,0.5)"}}>or search in the sidebar</p>
+          <div className="px-8 py-6 text-center rounded-2xl"
+            style={{background:"rgba(6,15,30,0.9)",border:"1px solid rgba(100,255,218,0.15)",backdropFilter:"blur(12px)"}}>
+            <div className="text-3xl mb-3">🛰️</div>
+            <p className="text-sm font-semibold" style={{color:"#CCD6F6"}}>Select a Location</p>
+            <p className="text-xs mt-1.5" style={{color:"rgba(136,146,176,0.6)"}}>Click anywhere on the map or search in the sidebar</p>
           </div>
         </div>
       )}
@@ -207,25 +207,25 @@ export default function MapView() {
       {/* Coordinates */}
       {location && (
         <div className="absolute bottom-4 right-4 z-[500] px-3 py-1.5 rounded-lg"
-          style={{background:"rgba(26,26,46,0.9)",border:"1px solid rgba(233,69,96,0.2)",backdropFilter:"blur(8px)"}}>
-          <p className="text-[10px] font-mono" style={{color:"rgba(245,240,235,0.5)"}}>
-            <span style={{color:"#E94560"}}>{location.lat.toFixed(5)}°N</span>
-            <span style={{color:"rgba(245,240,235,0.2)"}}> / </span>
-            <span style={{color:"#FF6B7A"}}>{location.lon.toFixed(5)}°E</span>
+          style={{background:"rgba(6,15,30,0.9)",border:"1px solid rgba(100,255,218,0.15)",backdropFilter:"blur(8px)"}}>
+          <p className="text-[10px] font-mono" style={{color:"rgba(136,146,176,0.7)"}}>
+            <span style={{color:"#64FFDA"}}>{location.lat.toFixed(5)}°N</span>
+            <span style={{color:"rgba(100,255,218,0.2)"}}> / </span>
+            <span style={{color:"#CCD6F6"}}>{location.lon.toFixed(5)}°E</span>
           </p>
         </div>
       )}
 
       {analysisComplete && showOverlay && (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+        <motion.div initial={{opacity:0}} animate={{opacity:1}}
           className="absolute top-4 left-4 z-[500] px-3 py-2.5 rounded-xl"
-          style={{background:"rgba(26,26,46,0.9)",border:"1px solid rgba(233,69,96,0.2)",backdropFilter:"blur(8px)"}}>
+          style={{background:"rgba(6,15,30,0.9)",border:"1px solid rgba(100,255,218,0.15)",backdropFilter:"blur(8px)"}}>
           <p className="text-[9px] font-mono uppercase tracking-widest mb-2"
-            style={{color:"rgba(233,69,96,0.6)"}}>Change Intensity</p>
+            style={{color:"rgba(100,255,218,0.6)"}}>Change Intensity</p>
           <div className="w-28 h-1.5 rounded-full"
-            style={{background:"linear-gradient(90deg,rgba(22,160,133,0.7),rgba(233,69,96,0.9))"}} />
+            style={{background:"linear-gradient(90deg,rgba(100,255,218,0.6),rgba(255,107,107,0.8))"}} />
           <div className="flex justify-between text-[8px] font-mono mt-1"
-            style={{color:"rgba(245,240,235,0.25)"}}>
+            style={{color:"rgba(136,146,176,0.4)"}}>
             <span>Low</span><span>High</span>
           </div>
         </motion.div>
