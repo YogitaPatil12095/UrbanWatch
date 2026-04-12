@@ -14,8 +14,8 @@ export default function AlertBanner() {
   if (!alerts.length) return null;
 
   return (
-    <div className="flex-shrink-0 px-6 py-2 flex gap-3 overflow-x-auto border-b"
-      style={{borderColor:"rgba(233,69,96,0.12)",background:"rgba(15,15,26,0.5)"}}>
+    <div className="flex-shrink-0 px-4 py-1.5 flex gap-2 overflow-x-auto border-b"
+      style={{borderColor:"rgba(233,69,96,0.1)",background:"rgba(15,15,26,0.6)"}}>
       <AnimatePresence>
         {alerts.map((alert, i) => {
           const styles = {

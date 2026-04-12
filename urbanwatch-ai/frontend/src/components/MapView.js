@@ -183,12 +183,10 @@ export default function MapView() {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             onClick={() => setShowOverlay((v) => !v)}
-            className={`px-4 py-2 rounded-lg text-xs font-mono border transition-all ${
-              showOverlay
-                ? "border-brand-accent/40 text-brand-accent"
-                : "border-white/10 text-slate-400"
-            }`}
-            style={showOverlay ? {background:"rgba(233,69,96,0.12)",borderColor:"rgba(233,69,96,0.4)",color:"#E94560"} : {background:"rgba(45,45,74,0.4)"}}
+            className="px-3 py-1.5 rounded-lg text-xs font-mono border transition-all"
+            style={showOverlay
+              ? {background:"rgba(233,69,96,0.15)",borderColor:"rgba(233,69,96,0.4)",color:"#E94560"}
+              : {background:"rgba(26,26,46,0.8)",borderColor:"rgba(233,69,96,0.15)",color:"rgba(245,240,235,0.4)"}}
           >
             {showOverlay ? "🔥 Hide Heatmap" : "🔥 Show Heatmap"}
           </motion.button>
@@ -197,33 +195,37 @@ export default function MapView() {
 
       {!location && (
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-[500]">
-          <div className="glass-card px-6 py-4 text-center border border-neon-blue/20">
-            <p className="text-sm text-slate-400 font-mono">Click anywhere on the map to select a location</p>
+          <div className="px-6 py-4 text-center rounded-2xl"
+            style={{background:"rgba(26,26,46,0.85)",border:"1px solid rgba(233,69,96,0.2)",backdropFilter:"blur(12px)"}}>
+            <div className="text-2xl mb-2">🛰️</div>
+            <p className="text-sm font-mono" style={{color:"rgba(245,240,235,0.6)"}}>Click anywhere to select a location</p>
+            <p className="text-xs font-mono mt-1" style={{color:"rgba(233,69,96,0.5)"}}>or search in the sidebar</p>
           </div>
         </div>
       )}
 
+      {/* Coordinates */}
       {location && (
-        <div className="absolute bottom-6 right-6 z-[500] glass-card px-3 py-2 border border-white/10">
-          <p className="text-xs font-mono text-slate-400">
-            <span className="text-neon-blue">{location.lat.toFixed(5)}°N</span>
-            {" / "}
-            <span className="text-neon-pink">{location.lon.toFixed(5)}°E</span>
+        <div className="absolute bottom-4 right-4 z-[500] px-3 py-1.5 rounded-lg"
+          style={{background:"rgba(26,26,46,0.9)",border:"1px solid rgba(233,69,96,0.2)",backdropFilter:"blur(8px)"}}>
+          <p className="text-[10px] font-mono" style={{color:"rgba(245,240,235,0.5)"}}>
+            <span style={{color:"#E94560"}}>{location.lat.toFixed(5)}°N</span>
+            <span style={{color:"rgba(245,240,235,0.2)"}}> / </span>
+            <span style={{color:"#FF6B7A"}}>{location.lon.toFixed(5)}°E</span>
           </p>
         </div>
       )}
 
       {analysisComplete && showOverlay && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="absolute top-4 left-4 z-[500] glass-card p-3 border border-white/10"
-        >
-          <p className="text-[10px] font-mono text-slate-500 mb-2 uppercase tracking-wider">Change Intensity</p>
-          <div className="w-24 h-2 rounded-full" style={{
-            background: "linear-gradient(90deg, rgba(0,212,255,0.5), rgba(255,0,110,0.8))"
-          }} />
-          <div className="flex justify-between text-[9px] font-mono text-slate-600 mt-1">
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+          className="absolute top-4 left-4 z-[500] px-3 py-2.5 rounded-xl"
+          style={{background:"rgba(26,26,46,0.9)",border:"1px solid rgba(233,69,96,0.2)",backdropFilter:"blur(8px)"}}>
+          <p className="text-[9px] font-mono uppercase tracking-widest mb-2"
+            style={{color:"rgba(233,69,96,0.6)"}}>Change Intensity</p>
+          <div className="w-28 h-1.5 rounded-full"
+            style={{background:"linear-gradient(90deg,rgba(22,160,133,0.7),rgba(233,69,96,0.9))"}} />
+          <div className="flex justify-between text-[8px] font-mono mt-1"
+            style={{color:"rgba(245,240,235,0.25)"}}>
             <span>Low</span><span>High</span>
           </div>
         </motion.div>
