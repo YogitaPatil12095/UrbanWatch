@@ -1,10 +1,9 @@
-import React, { useEffect, useRef, useState, useMemo } from "react";
+import React, { useEffect, useRef, useMemo } from "react";
 import { MapContainer, TileLayer, Marker, useMap, useMapEvents } from "react-leaflet";
 import L from "leaflet";
 import { motion } from "framer-motion";
 import { useAnalysis } from "../context/AnalysisContext";
 
-// Fix default marker icon (Leaflet + webpack issue)
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
   iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
@@ -12,57 +11,38 @@ L.Icon.Default.mergeOptions({
   shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
 });
 
-// Custom neon marker
 const neonIcon = L.divIcon({
   className: "",
-  html: `<div style="
-    width:16px;height:16px;border-radius:50%;
-    background:#00d4ff;border:2px solid #fff;
-    box-shadow:0 0 12px #00d4ff,0 0 24px #00d4ff88;
-    position:relative;
-  ">
-    <div style="
-      position:absolute;inset:-6px;border-radius:50%;
-      background:#00d4ff22;animation:ping 1.5s ease-in-out infinite;
-    "></div>
-  </div>`,
+  html: `<div style="width:16px;height:16px;border-radius:50%;background:#00d4ff;border:2px solid #fff;box-shadow:0 0 12px #00d4ff,0 0 24px #00d4ff88;"></div>`,
   iconSize: [16, 16],
   iconAnchor: [8, 8],
 });
 
-// Component to fly to new location
 function FlyToLocation({ lat, lon }) {
   const map = useMap();
   useEffect(() => {
-    if (lat && lon) {
-      map.flyTo([lat, lon], 12, { duration: 1.5 });
-    }
+    if (lat && lon) map.flyTo([lat, lon], 12, { duration: 1.5 });
   }, [lat, lon, map]);
   return null;
 }
 
-// Component to handle map clicks
 function ClickHandler({ onMapClick }) {
   useMapEvents({ click: (e) => onMapClick(e.latlng) });
   return null;
 }
 
-// Canvas heatmap overlay drawn directly on map
-function HeatmapOverlay({ location, visible }) {
+function HeatmapOverlay({ location, visible, points }) {
   const map = useMap();
   const canvasRef = useRef(null);
   const layerRef = useRef(null);
 
   useEffect(() => {
-    if (!visible || !location) {
+    if (!visible || !location || !points?.length) {
       if (layerRef.current) { map.removeLayer(layerRef.current); layerRef.current = null; }
       return;
     }
-
-    // Remove old layer
     if (layerRef.current) map.removeLayer(layerRef.current);
 
-    // Create canvas overlay
     const CanvasLayer = L.Layer.extend({
       onAdd(m) {
         const canvas = L.DomUtil.create("canvas", "");
@@ -85,19 +65,11 @@ function HeatmapOverlay({ location, visible }) {
         const ctx = canvas.getContext("2d");
         ctx.clearRect(0, 0, size.x, size.y);
 
-        // Generate change points around location
-        const rng = (seed) => { let x = Math.sin(seed) * 10000; return x - Math.floor(x); };
-        const points = Array.from({ length: 60 }, (_, i) => ({
-          lat: location.lat + (rng(i * 3.1) - 0.5) * 0.12,
-          lon: location.lon + (rng(i * 7.3) - 0.5) * 0.12,
-          intensity: rng(i * 13.7),
-        }));
-
         points.forEach(({ lat, lon, intensity }) => {
           const pt = map.latLngToContainerPoint([lat, lon]);
           const r = 30 + intensity * 40;
           const grad = ctx.createRadialGradient(pt.x, pt.y, 0, pt.x, pt.y, r);
-          if (intensity > 0.6) {
+          if (intensity > 0.5) {
             grad.addColorStop(0, `rgba(255,0,110,${intensity * 0.7})`);
             grad.addColorStop(1, "rgba(255,0,110,0)");
           } else {
@@ -118,14 +90,35 @@ function HeatmapOverlay({ location, visible }) {
     return () => {
       if (layerRef.current) { map.removeLayer(layerRef.current); layerRef.current = null; }
     };
-  }, [map, location, visible]);
+  }, [map, location, visible, points]);
 
   return null;
 }
 
 export default function MapView() {
-  const { location, setLocation, analysisComplete } = useAnalysis();
-  const [showOverlay, setShowOverlay] = useState(true);
+  const { location, setLocation, analysisComplete, result } = useAnalysis();
+  const [showOverlay, setShowOverlay] = React.useState(true);
+
+  // Build heatmap points from REAL analysis stats
+  const heatmapPoints = useMemo(() => {
+    if (!analysisComplete || !location || !result) return [];
+
+    const rng = (seed) => { let x = Math.sin(seed) * 10000; return x - Math.floor(x); };
+    const changePct  = result.change_pct  || 10;
+    const urbanPct   = result.urban_pct   || 5;
+    const anomalyPct = result.anomaly_pct || 3;
+
+    // Spread proportional to how much changed — different cities get different spreads
+    const spread  = 0.03 + (changePct / 100) * 0.07;
+    const nPoints = Math.max(30, Math.min(120, Math.round(changePct * 4)));
+
+    return Array.from({ length: nPoints }, (_, i) => ({
+      lat: location.lat + (rng(i * 3.1 + changePct) - 0.5) * spread,
+      lon: location.lon + (rng(i * 7.3 + urbanPct)  - 0.5) * spread,
+      // Intensity driven by anomaly — high anomaly = more red, low = more blue
+      intensity: Math.min(1, rng(i * 13.7 + anomalyPct) * (0.3 + anomalyPct / 20)),
+    }));
+  }, [analysisComplete, location, result]);
 
   const handleMapClick = ({ lat, lng }) => {
     setLocation({ lat, lon: lng, name: `${lat.toFixed(4)}°N, ${lng.toFixed(4)}°E` });
@@ -139,28 +132,27 @@ export default function MapView() {
         style={{ width: "100%", height: "100%", background: "#050810" }}
         zoomControl={true}
       >
-        {/* Dark satellite-style tile layer — free, no token */}
         <TileLayer
           url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
           attribution='&copy; <a href="https://carto.com/">CARTO</a>'
           maxZoom={19}
         />
-
         <ClickHandler onMapClick={handleMapClick} />
-
         {location && (
           <>
             <FlyToLocation lat={location.lat} lon={location.lon} />
             <Marker position={[location.lat, location.lon]} icon={neonIcon} />
           </>
         )}
-
         {analysisComplete && (
-          <HeatmapOverlay location={location} visible={showOverlay} />
+          <HeatmapOverlay
+            location={location}
+            visible={showOverlay}
+            points={heatmapPoints}
+          />
         )}
       </MapContainer>
 
-      {/* Overlay toggle */}
       {analysisComplete && (
         <div className="absolute bottom-6 left-6 z-[500]">
           <motion.button
@@ -178,7 +170,6 @@ export default function MapView() {
         </div>
       )}
 
-      {/* Click hint */}
       {!location && (
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-[500]">
           <div className="glass-card px-6 py-4 text-center border border-neon-blue/20">
@@ -187,7 +178,6 @@ export default function MapView() {
         </div>
       )}
 
-      {/* Coordinates */}
       {location && (
         <div className="absolute bottom-6 right-6 z-[500] glass-card px-3 py-2 border border-white/10">
           <p className="text-xs font-mono text-slate-400">
@@ -198,7 +188,6 @@ export default function MapView() {
         </div>
       )}
 
-      {/* Legend */}
       {analysisComplete && showOverlay && (
         <motion.div
           initial={{ opacity: 0 }}

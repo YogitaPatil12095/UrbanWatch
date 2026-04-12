@@ -48,41 +48,62 @@ def _lat_lon_to_tile_epsg4326(lat: float, lon: float, zoom: int) -> tuple[int, i
 
 async def _fetch_nasa_gibs(lat: float, lon: float, year: int, cache_path: Path) -> dict | None:
     """
-    Fetch real satellite imagery from NASA GIBS (Global Imagery Browse Services).
-    Completely FREE — no API key, no registration required.
-    Uses MODIS Terra True Color (250m resolution), available 2000–present.
-    Source: https://nasa-gibs.github.io/gibs-api-docs/
+    Fetch real satellite imagery from NASA GIBS.
+    Uses zoom 8 for city-level detail (~75km tile).
+    Stitches a 2x2 grid of tiles centered on the location for better coverage.
     """
     layer = "MODIS_Terra_CorrectedReflectance_TrueColor"
     tile_matrix_set = "250m"
-
-    # Use summer date for best cloud-free imagery over most regions
     date_str = f"{year}-07-01"
+    zoom = 8  # ~75km per tile — city-level detail
 
-    # Zoom 6 = ~300km tile width, good for city-scale urban analysis
-    zoom = 6
-    row, col = _lat_lon_to_tile_epsg4326(lat, lon, zoom)
+    center_row, center_col = _lat_lon_to_tile_epsg4326(lat, lon, zoom)
 
-    # NASA GIBS WMTS REST endpoint (EPSG:4326)
-    url = (
-        f"https://gibs.earthdata.nasa.gov/wmts/epsg4326/best/"
-        f"{layer}/default/{date_str}/{tile_matrix_set}/{zoom}/{row}/{col}.jpg"
-    )
-
-    print(f"[GIBS] Fetching MODIS {year} tile z={zoom} row={row} col={col}")
-
+    # Fetch the center tile + neighbors to stitch a larger image
+    tiles = {}
     async with httpx.AsyncClient(timeout=30, follow_redirects=True) as client:
-        resp = await client.get(url)
-        if resp.status_code != 200:
-            print(f"[GIBS] HTTP {resp.status_code}")
-            return None
-        if len(resp.content) < 5000:
-            print(f"[GIBS] Tile too small ({len(resp.content)}B) — likely empty")
-            return None
+        for dr in [-1, 0, 1]:
+            for dc in [-1, 0, 1]:
+                r = max(0, center_row + dr)
+                c = max(0, center_col + dc)
+                url = (
+                    f"https://gibs.earthdata.nasa.gov/wmts/epsg4326/best/"
+                    f"{layer}/default/{date_str}/{tile_matrix_set}/{zoom}/{r}/{c}.jpg"
+                )
+                try:
+                    resp = await client.get(url)
+                    if resp.status_code == 200 and len(resp.content) > 3000:
+                        tiles[(dr, dc)] = resp.content
+                except Exception:
+                    pass
 
-        cache_path.write_bytes(resp.content)
+    if not tiles:
+        print(f"[GIBS] No valid tiles found for {lat},{lon} {year}")
+        return None
 
-    print(f"[GIBS] ✓ Real MODIS satellite image: {len(resp.content)} bytes")
+    # Stitch tiles into one image
+    tile_size = 256
+    grid_size = 3
+    canvas = Image.new("RGB", (tile_size * grid_size, tile_size * grid_size), (30, 30, 30))
+
+    for (dr, dc), content in tiles.items():
+        try:
+            tile_img = Image.open(__import__("io").BytesIO(content)).convert("RGB")
+            tile_img = tile_img.resize((tile_size, tile_size))
+            x = (dc + 1) * tile_size
+            y = (dr + 1) * tile_size
+            canvas.paste(tile_img, (x, y))
+        except Exception:
+            pass
+
+    # Crop to center 512x512 for consistent size
+    w, h = canvas.size
+    left = (w - 512) // 2
+    top = (h - 512) // 2
+    canvas = canvas.crop((left, top, left + 512, top + 512))
+    canvas.save(str(cache_path), "JPEG", quality=90)
+
+    print(f"[GIBS] ✓ Stitched {len(tiles)} tiles for {lat:.3f},{lon:.3f} {year}")
     return {
         "image_url": f"/static/images/{cache_path.name}",
         "source": "nasa_gibs_modis",
@@ -92,7 +113,7 @@ async def _fetch_nasa_gibs(lat: float, lon: float, year: int, cache_path: Path) 
         "date": date_str,
         "layer": layer,
         "resolution": "250m",
-        "tile": f"z{zoom}/r{row}/c{col}",
+        "tile": f"z{zoom}/r{center_row}/c{center_col}",
     }
 
 
