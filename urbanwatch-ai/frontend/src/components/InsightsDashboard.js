@@ -115,7 +115,7 @@ export default function InsightsDashboard() {
     name, value,
   }));
 
-  const COLORS = ["#00d4ff", "#00ff88", "#ff006e", "#ffd700", "#a78bfa"];
+  const COLORS = ["#E94560", "#16A085", "#FF6B7A", "#f59e0b", "#a78bfa"];
 
   const radarData = [
     { subject: "Urban Growth",   A: result.urban_pct,      fullMark: 50 },
@@ -140,10 +140,10 @@ export default function InsightsDashboard() {
       <div className="flex items-start justify-between">
         <div>
           <h2 className="text-xl font-bold gradient-text font-mono">Full ML Analysis Report</h2>
-          <p className="text-sm text-slate-500 font-mono mt-1">
+          <p className="text-sm font-mono mt-1" style={{color:"rgba(245,240,235,0.4)"}}>
             📍 {location?.name} &nbsp;|&nbsp;
-            <span className="text-neon-blue">{yearFrom}</span> → <span className="text-neon-pink">{yearTo}</span>
-            &nbsp;|&nbsp; Mode: <span className="text-neon-green">{result.detection_mode}</span>
+            <span style={{color:"#E94560"}}>{yearFrom}</span> → <span style={{color:"#FF6B7A"}}>{yearTo}</span>
+            &nbsp;|&nbsp; Mode: <span style={{color:"#16A085"}}>{result.detection_mode}</span>
           </p>
         </div>
         <RiskGauge score={result.risk_score} level={result.risk_level} />
@@ -151,11 +151,11 @@ export default function InsightsDashboard() {
 
       {/* Stat cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <StatCard index={0} icon="🏙️" label="Urban Expansion" value={result.urban_pct.toFixed(1)} unit="%" color="#00d4ff" />
-        <StatCard index={1} icon="🌿" label="Vegetation Loss" value={result.vegetation_pct.toFixed(1)} unit="%" color="#ff006e" />
-        <StatCard index={2} icon="⚠️" label="Anomaly Area" value={result.anomaly_pct.toFixed(1)} unit="%" color="#ffd700"
+        <StatCard index={0} icon="🏙️" label="Urban Expansion" value={result.urban_pct.toFixed(1)} unit="%" color="#E94560" />
+        <StatCard index={1} icon="🌿" label="Vegetation Loss" value={result.vegetation_pct.toFixed(1)} unit="%" color="#FF6B7A" />
+        <StatCard index={2} icon="⚠️" label="Anomaly Area" value={result.anomaly_pct.toFixed(1)} unit="%" color="#f59e0b"
           sub={`+${result.increase_pct.toFixed(1)}% increase / -${result.decrease_pct.toFixed(1)}% decrease`} />
-        <StatCard index={3} icon="🏗️" label="Infra Growth" value={result.infra_growth_pct > 0 ? "+" + result.infra_growth_pct.toFixed(1) : result.infra_growth_pct.toFixed(1)} unit="%" color="#a78bfa" />
+        <StatCard index={3} icon="🏗️" label="Infra Growth" value={result.infra_growth_pct > 0 ? "+" + result.infra_growth_pct.toFixed(1) : result.infra_growth_pct.toFixed(1)} unit="%" color="#16A085" />
       </div>
 
       {/* Real verified data panel */}
@@ -164,11 +164,11 @@ export default function InsightsDashboard() {
       {/* Spectral indices row */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <StatCard index={4} icon="🌱" label="NDVI (after)" value={result.ndvi_mean_after.toFixed(3)} unit=""
-          color="#00ff88" sub={`Δ ${result.ndvi_delta > 0 ? "+" : ""}${(result.ndvi_delta).toFixed(3)}`} />
-        <StatCard index={5} icon="🏢" label="NDBI (after)" value={result.ndbi_mean_after.toFixed(3)} unit="" color="#00d4ff" />
+          color="#16A085" sub={`Δ ${result.ndvi_delta > 0 ? "+" : ""}${(result.ndvi_delta).toFixed(3)}`} />
+        <StatCard index={5} icon="🏢" label="NDBI (after)" value={result.ndbi_mean_after.toFixed(3)} unit="" color="#E94560" />
         <StatCard index={6} icon="💧" label="MNDWI (after)" value={result.mndwi_mean_after.toFixed(3)} unit="" color="#60a5fa" />
         <StatCard index={7} icon="📐" label="PCA Change" value={result.pca_change_pct.toFixed(1)} unit="%"
-          color="#f472b6" sub={`PC1 explains ${result.pca_variance_explained?.[0]}% variance`} />
+          color="#a78bfa" sub={`PC1 explains ${result.pca_variance_explained?.[0]}% variance`} />
       </div>
 
       {/* Charts row */}
@@ -180,20 +180,20 @@ export default function InsightsDashboard() {
           <ResponsiveContainer width="100%" height={200}>
             <AreaChart data={trendData}>
               <defs>
-                {[["urbanGrad","#00d4ff"],["vegGrad","#ff006e"],["anomGrad","#ffd700"]].map(([id,c]) => (
+                {[["urbanGrad","#E94560"],["vegGrad","#FF6B7A"],["anomGrad","#f59e0b"]].map(([id,c]) => (
                   <linearGradient key={id} id={id} x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor={c} stopOpacity={0.3} />
                     <stop offset="95%" stopColor={c} stopOpacity={0} />
                   </linearGradient>
                 ))}
               </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="#1e2a45" />
-              <XAxis dataKey="year" tick={{ fill: "#64748b", fontSize: 10, fontFamily: "monospace" }} />
-              <YAxis tick={{ fill: "#64748b", fontSize: 10, fontFamily: "monospace" }} />
+              <CartesianGrid strokeDasharray="3 3" stroke="#2D2D4A" />
+              <XAxis dataKey="year" tick={{ fill: "#8a8a9a", fontSize: 10, fontFamily: "monospace" }} />
+              <YAxis tick={{ fill: "#8a8a9a", fontSize: 10, fontFamily: "monospace" }} />
               <Tooltip content={<CustomTooltip />} />
-              <Area type="monotone" dataKey="urban" name="Urban %" stroke="#00d4ff" fill="url(#urbanGrad)" strokeWidth={2} />
-              <Area type="monotone" dataKey="vegetation" name="Veg Loss %" stroke="#ff006e" fill="url(#vegGrad)" strokeWidth={2} />
-              <Area type="monotone" dataKey="anomaly" name="Anomaly %" stroke="#ffd700" fill="url(#anomGrad)" strokeWidth={2} />
+              <Area type="monotone" dataKey="urban" name="Urban %" stroke="#E94560" fill="url(#urbanGrad)" strokeWidth={2} />
+              <Area type="monotone" dataKey="vegetation" name="Veg Loss %" stroke="#FF6B7A" fill="url(#vegGrad)" strokeWidth={2} />
+              <Area type="monotone" dataKey="anomaly" name="Anomaly %" stroke="#f59e0b" fill="url(#anomGrad)" strokeWidth={2} />
             </AreaChart>
           </ResponsiveContainer>
         </motion.div>
@@ -206,7 +206,7 @@ export default function InsightsDashboard() {
             <RadarChart data={radarData}>
               <PolarGrid stroke="#1e2a45" />
               <PolarAngleAxis dataKey="subject" tick={{ fill: "#64748b", fontSize: 9, fontFamily: "monospace" }} />
-              <Radar name="Change" dataKey="A" stroke="#00d4ff" fill="#00d4ff" fillOpacity={0.2} strokeWidth={2} />
+              <Radar name="Change" dataKey="A" stroke="#E94560" fill="#E94560" fillOpacity={0.2} strokeWidth={2} />
             </RadarChart>
           </ResponsiveContainer>
         </motion.div>

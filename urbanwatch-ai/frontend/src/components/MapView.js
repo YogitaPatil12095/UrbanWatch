@@ -101,11 +101,11 @@ function HeatmapOverlay({ location, visible, points }) {
           const r = 30 + intensity * 40;
           const grad = ctx.createRadialGradient(pt.x, pt.y, 0, pt.x, pt.y, r);
           if (intensity > 0.5) {
-            grad.addColorStop(0, `rgba(255,0,110,${intensity * 0.7})`);
-            grad.addColorStop(1, "rgba(255,0,110,0)");
+            grad.addColorStop(0, `rgba(233,69,96,${intensity * 0.75})`);
+            grad.addColorStop(1, "rgba(233,69,96,0)");
           } else {
-            grad.addColorStop(0, `rgba(0,212,255,${intensity * 0.6})`);
-            grad.addColorStop(1, "rgba(0,212,255,0)");
+            grad.addColorStop(0, `rgba(22,160,133,${intensity * 0.65})`);
+            grad.addColorStop(1, "rgba(22,160,133,0)");
           }
           ctx.fillStyle = grad;
           ctx.beginPath();
@@ -185,9 +185,10 @@ export default function MapView() {
             onClick={() => setShowOverlay((v) => !v)}
             className={`px-4 py-2 rounded-lg text-xs font-mono border transition-all ${
               showOverlay
-                ? "bg-neon-blue/20 border-neon-blue/40 text-neon-blue"
-                : "bg-white/5 border-white/10 text-slate-400"
+                ? "border-brand-accent/40 text-brand-accent"
+                : "border-white/10 text-slate-400"
             }`}
+            style={showOverlay ? {background:"rgba(233,69,96,0.12)",borderColor:"rgba(233,69,96,0.4)",color:"#E94560"} : {background:"rgba(45,45,74,0.4)"}}
           >
             {showOverlay ? "🔥 Hide Heatmap" : "🔥 Show Heatmap"}
           </motion.button>

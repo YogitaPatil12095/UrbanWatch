@@ -4,17 +4,29 @@ module.exports = {
   theme: {
     extend: {
       colors: {
+        brand: {
+          primary:      "#1A1A2E",
+          "primary-l":  "#2D2D4A",
+          "primary-d":  "#0F0F1A",
+          accent:       "#E94560",
+          "accent-l":   "#FF6B7A",
+          "accent-d":   "#C73650",
+          secondary:    "#F5F0EB",
+          "secondary-d":"#E8E0D8",
+          teal:         "#16A085",
+        },
+        // keep legacy aliases so existing classes still compile
         neon: {
-          blue: "#00d4ff",
-          pink: "#ff006e",
-          green: "#00ff88",
+          blue:  "#E94560",
+          pink:  "#FF6B7A",
+          green: "#16A085",
         },
         dark: {
-          900: "#050810",
-          800: "#0a0f1e",
-          700: "#0f1629",
-          600: "#151d35",
-          500: "#1e2a45",
+          900: "#0F0F1A",
+          800: "#1A1A2E",
+          700: "#2D2D4A",
+          600: "#2D2D4A",
+          500: "#3a3a5c",
         },
       },
       fontFamily: {
