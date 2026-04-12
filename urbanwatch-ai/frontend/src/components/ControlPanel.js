@@ -51,7 +51,7 @@ export default function ControlPanel() {
         <div className="relative">
           <div className="flex items-center gap-2 rounded-lg px-3 py-2"
             style={{background:"rgba(10,25,47,0.8)",border:"1px solid rgba(100,255,218,0.15)"}}>
-            <span className="text-sm" style={{color:"#64FFDA"}}>📍</span>
+            <span className="text-sm font-mono" style={{color:"#64FFDA"}}>+</span>
             <input type="text" value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search city..."
@@ -149,7 +149,7 @@ export default function ControlPanel() {
                 style={{borderColor:"rgba(100,255,218,0.3)",borderTopColor:"#64FFDA"}} />
               <span className="text-xs truncate">{loadingStep||"Processing..."}</span>
             </span>
-          ) : "🚀 Run Analysis"}
+          ) : "Run Analysis"}
         </motion.button>
 
         {analysisComplete && result && (

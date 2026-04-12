@@ -49,9 +49,9 @@ function AppShell() {
   const { analysisComplete, loading, location, yearFrom, yearTo, result } = useAnalysis();
 
   const tabs = [
-    { id: "map",      label: "Map View",  icon: "🗺️" },
-    { id: "insights", label: "Insights",  icon: "📊", locked: !analysisComplete },
-    { id: "compare",  label: "Compare",   icon: "🔍", locked: !analysisComplete },
+    { id: "map",      label: "Map View",  icon: "" },
+    { id: "insights", label: "Insights",  icon: "", locked: !analysisComplete },
+    { id: "compare",  label: "Compare",   icon: "", locked: !analysisComplete },
   ];
 
   return (
@@ -73,7 +73,7 @@ function AppShell() {
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-lg flex items-center justify-center text-base"
             style={{background:"linear-gradient(135deg,rgba(100,255,218,0.2),rgba(100,255,218,0.05))",border:"1px solid rgba(100,255,218,0.3)"}}>
-            🛰️
+            ◉
           </div>
           <div>
             <h1 className="text-base font-bold tracking-wide gradient-text">UrbanWatch AI</h1>
@@ -85,7 +85,7 @@ function AppShell() {
             <>
               <div className="w-px h-6 mx-2" style={{background:"rgba(100,255,218,0.1)"}} />
               <div className="flex items-center gap-2 text-xs font-mono" style={{color:"rgba(136,146,176,0.7)"}}>
-                <span style={{color:"#64FFDA"}}>📍</span>
+                <span style={{color:"#64FFDA"}}>+</span>
                 <span>{location.name?.split(",")[0]}</span>
                 <span style={{color:"rgba(100,255,218,0.3)"}}>·</span>
                 <span style={{color:"#64FFDA"}}>{yearFrom}</span>

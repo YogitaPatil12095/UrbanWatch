@@ -89,17 +89,17 @@ export function AnalysisProvider({ children }) {
       // Smart alerts
       const newAlerts = [];
       if (data.urban_pct > 15)
-        newAlerts.push({ type: "warning", message: "High urban growth detected", icon: "🏙️" });
+        newAlerts.push({ type: "warning", message: "High urban growth detected", icon: "" });
       if (data.vegetation_pct > 10)
-        newAlerts.push({ type: "danger", message: "Significant vegetation loss observed", icon: "🌿" });
+        newAlerts.push({ type: "danger", message: "Significant vegetation loss observed", icon: "" });
       if (data.anomaly_pct > 20)
-        newAlerts.push({ type: "warning", message: `Anomalous change: ${data.anomaly_pct.toFixed(1)}% of area`, icon: "⚠️" });
+        newAlerts.push({ type: "warning", message: `Anomalous change: ${data.anomaly_pct.toFixed(1)}% of area`, icon: "" });
       if (data.risk_level === "High" || data.risk_level === "Critical")
-        newAlerts.push({ type: "danger", message: `${data.risk_level} environmental risk detected`, icon: "🚨" });
+        newAlerts.push({ type: "danger", message: `${data.risk_level} environmental risk detected`, icon: "" });
       if (data.infra_growth_pct > 2)
-        newAlerts.push({ type: "info", message: `Infrastructure expansion: +${data.infra_growth_pct.toFixed(1)}%`, icon: "🏗️" });
+        newAlerts.push({ type: "info", message: `Infrastructure expansion: +${data.infra_growth_pct.toFixed(1)}%`, icon: "" });
       if (data.ndvi_delta < -0.05)
-        newAlerts.push({ type: "danger", message: `NDVI dropped ${(data.ndvi_delta * 100).toFixed(1)}% — vegetation declining`, icon: "📉" });
+        newAlerts.push({ type: "danger", message: `NDVI dropped ${(data.ndvi_delta * 100).toFixed(1)}% — vegetation declining`, icon: "" });
 
       setAlerts(newAlerts);
       setAnalysisComplete(true);

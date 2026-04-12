@@ -94,7 +94,7 @@ export default function InsightsDashboard() {
   if (!analysisComplete || !result) {
     return (
       <div className="flex flex-col items-center justify-center h-64 text-center">
-        <div className="text-4xl mb-4">📊</div>
+        <div className="text-4xl mb-4">—</div>
         <p className="text-slate-400 font-mono text-sm">Run an analysis to see insights</p>
       </div>
     );
@@ -141,7 +141,7 @@ export default function InsightsDashboard() {
         <div>
           <h2 className="text-xl font-bold gradient-text font-mono">Full ML Analysis Report</h2>
           <p className="text-sm font-mono mt-1" style={{color:"rgba(245,240,235,0.4)"}}>
-            📍 {location?.name} &nbsp;|&nbsp;
+            {location?.name} &nbsp;|&nbsp;
             <span style={{color:"#E94560"}}>{yearFrom}</span> → <span style={{color:"#FF6B7A"}}>{yearTo}</span>
             &nbsp;|&nbsp; Mode: <span style={{color:"#16A085"}}>{result.detection_mode}</span>
           </p>
@@ -151,11 +151,11 @@ export default function InsightsDashboard() {
 
       {/* Stat cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <StatCard index={0} icon="🏙️" label="Urban Expansion" value={result.urban_pct.toFixed(1)} unit="%" color="#E94560" />
-        <StatCard index={1} icon="🌿" label="Vegetation Loss" value={result.vegetation_pct.toFixed(1)} unit="%" color="#FF6B7A" />
-        <StatCard index={2} icon="⚠️" label="Anomaly Area" value={result.anomaly_pct.toFixed(1)} unit="%" color="#f59e0b"
+        <StatCard index={0} icon="U" label="Urban Expansion" value={result.urban_pct.toFixed(1)} unit="%" color="#64FFDA" />
+        <StatCard index={1} icon="V" label="Vegetation Loss" value={result.vegetation_pct.toFixed(1)} unit="%" color="#FF6B6B" />
+        <StatCard index={2} icon="A" label="Anomaly Area" value={result.anomaly_pct.toFixed(1)} unit="%" color="#f59e0b"
           sub={`+${result.increase_pct.toFixed(1)}% increase / -${result.decrease_pct.toFixed(1)}% decrease`} />
-        <StatCard index={3} icon="🏗️" label="Infra Growth" value={result.infra_growth_pct > 0 ? "+" + result.infra_growth_pct.toFixed(1) : result.infra_growth_pct.toFixed(1)} unit="%" color="#16A085" />
+        <StatCard index={3} icon="I" label="Infra Growth" value={result.infra_growth_pct > 0 ? "+" + result.infra_growth_pct.toFixed(1) : result.infra_growth_pct.toFixed(1)} unit="%" color="#16A085" />
       </div>
 
       {/* Real verified data panel */}
@@ -163,11 +163,11 @@ export default function InsightsDashboard() {
 
       {/* Spectral indices row */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <StatCard index={4} icon="🌱" label="NDVI (after)" value={result.ndvi_mean_after.toFixed(3)} unit=""
+        <StatCard index={4} icon="N" label="NDVI (after)" value={result.ndvi_mean_after.toFixed(3)} unit=""
           color="#16A085" sub={`Δ ${result.ndvi_delta > 0 ? "+" : ""}${(result.ndvi_delta).toFixed(3)}`} />
-        <StatCard index={5} icon="🏢" label="NDBI (after)" value={result.ndbi_mean_after.toFixed(3)} unit="" color="#E94560" />
-        <StatCard index={6} icon="💧" label="MNDWI (after)" value={result.mndwi_mean_after.toFixed(3)} unit="" color="#60a5fa" />
-        <StatCard index={7} icon="📐" label="PCA Change" value={result.pca_change_pct.toFixed(1)} unit="%"
+        <StatCard index={5} icon="B" label="NDBI (after)" value={result.ndbi_mean_after.toFixed(3)} unit="" color="#E94560" />
+        <StatCard index={6} icon="W" label="MNDWI (after)" value={result.mndwi_mean_after.toFixed(3)} unit="" color="#60a5fa" />
+        <StatCard index={7} icon="P" label="PCA Change" value={result.pca_change_pct.toFixed(1)} unit="%"
           color="#a78bfa" sub={`PC1 explains ${result.pca_variance_explained?.[0]}% variance`} />
       </div>
 

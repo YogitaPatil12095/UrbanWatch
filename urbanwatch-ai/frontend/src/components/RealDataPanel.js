@@ -22,7 +22,7 @@ export default function RealDataPanel() {
       <div className="flex items-center justify-between mb-4">
         <div>
           <h3 className="text-sm font-mono font-semibold text-neon-green">
-            ✅ Verified Real-World Data
+            Verified Real-World Data
           </h3>
           <p className="text-[10px] text-slate-500 font-mono mt-0.5">
             Sources: {data_sources?.join(" · ")}
@@ -40,10 +40,10 @@ export default function RealDataPanel() {
       {/* Real stats grid */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
         {[
-          { label: "Buildings", value: buildings_count?.toLocaleString(), icon: "🏢", color: "#00d4ff", note: "from OpenStreetMap" },
-          { label: "Roads", value: roads_count?.toLocaleString(), icon: "🛣️", color: "#a78bfa", note: "from OpenStreetMap" },
-          { label: "Urban Density", value: `${urban_density_per_km2}/km²`, icon: "📐", color: "#ffd700", note: "buildings+roads" },
-          { label: "Green Features", value: vegetation_features?.toLocaleString(), icon: "🌳", color: "#00ff88", note: "from OpenStreetMap" },
+          { label: "Buildings",     value: buildings_count?.toLocaleString(), icon: "B", color: "#64FFDA", note: "from OpenStreetMap" },
+          { label: "Roads",         value: roads_count?.toLocaleString(),      icon: "R", color: "#a78bfa", note: "from OpenStreetMap" },
+          { label: "Urban Density", value: `${urban_density_per_km2}/km²`,     icon: "D", color: "#ffd700", note: "buildings+roads" },
+          { label: "Green Features",value: vegetation_features?.toLocaleString(),icon:"G", color: "#16A085", note: "from OpenStreetMap" },
         ].map((item, i) => (
           <div key={i} className="bg-white/5 rounded-xl p-3 border border-white/5">
             <div className="text-lg mb-1">{item.icon}</div>
@@ -101,7 +101,7 @@ export default function RealDataPanel() {
             </div>
           ))}
           <p className="text-[9px] text-slate-600 font-mono mt-2">
-            ⚠️ {interpretation.data_note}
+            Note: {interpretation.data_note}
           </p>
         </div>
       )}

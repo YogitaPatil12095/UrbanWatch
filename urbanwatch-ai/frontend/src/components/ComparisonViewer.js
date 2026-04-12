@@ -17,7 +17,10 @@ function Placeholder({ year, label }) {
         </defs>
         <rect width="100%" height="100%" fill={`url(#g${year})`}/>
       </svg>
-      <div className="text-3xl mb-3 relative z-10">🛰️</div>
+      <div className="w-8 h-8 rounded-full flex items-center justify-center mb-3 relative z-10"
+        style={{background:"rgba(100,255,218,0.1)",border:"1px solid rgba(100,255,218,0.2)"}}>
+        <span className="text-sm font-mono" style={{color:"#64FFDA"}}>◎</span>
+      </div>
       <p className="text-sm font-mono relative z-10" style={{color:"rgba(100,255,218,0.6)"}}>{label}</p>
       <p className="text-xs font-mono mt-1 relative z-10" style={{color:"rgba(136,146,176,0.4)"}}>
         Satellite imagery from NASA GIBS
@@ -43,7 +46,10 @@ export default function ComparisonViewer() {
     return (
       <div className="flex flex-col items-center justify-center h-full text-center p-8"
         style={{background:"#0A192F"}}>
-        <div className="text-5xl mb-4">🔍</div>
+        <div className="w-10 h-10 rounded-full flex items-center justify-center mb-4"
+          style={{background:"rgba(100,255,218,0.08)",border:"1px solid rgba(100,255,218,0.15)"}}>
+          <span className="text-lg font-mono" style={{color:"#64FFDA"}}>◎</span>
+        </div>
         <p className="text-sm font-semibold" style={{color:"#CCD6F6"}}>No analysis yet</p>
         <p className="text-xs mt-2" style={{color:"rgba(136,146,176,0.5)"}}>
           Run an analysis to compare satellite images
@@ -58,9 +64,9 @@ export default function ComparisonViewer() {
   const changeUrl = changeMap ? `${API_URL}${changeMap}` : null;
 
   const modes = [
-    { id: "slider",     label: "Slider",      icon: "↔️" },
-    { id: "sidebyside", label: "Side by Side", icon: "▪️▪️" },
-    { id: "overlay",    label: "Change Map",   icon: "🔥" },
+    { id: "slider",     label: "Slider",       icon: "↔" },
+    { id: "sidebyside", label: "Side by Side",  icon: "||" },
+    { id: "overlay",    label: "Change Map",    icon: "+" },
   ];
 
   return (
@@ -74,7 +80,7 @@ export default function ComparisonViewer() {
             Before / After Comparison
           </h2>
           <p className="text-xs font-mono mt-0.5" style={{color:"rgba(136,146,176,0.5)"}}>
-            📍 {location?.name?.split(",")[0]} &nbsp;·&nbsp;
+            {location?.name?.split(",")[0]} &nbsp;·&nbsp;
             <span style={{color:"#64FFDA"}}>{yearFrom}</span>
             <span style={{color:"rgba(136,146,176,0.4)"}}> → </span>
             <span style={{color:"#CCD6F6"}}>{yearTo}</span>

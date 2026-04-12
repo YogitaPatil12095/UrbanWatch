@@ -66,60 +66,58 @@ function RealChangeOverlay({ location, changeMapUrl, visible }) {
 function HeatmapOverlay({ location, visible, points }) {
   const map = useMap();
   const canvasRef = useRef(null);
-  const layerRef = useRef(null);
+  const animRef = useRef(null);
 
   useEffect(() => {
-    if (!visible || !location || !points?.length) {
-      if (layerRef.current) { map.removeLayer(layerRef.current); layerRef.current = null; }
-      return;
-    }
-    if (layerRef.current) map.removeLayer(layerRef.current);
+    if (!visible || !location || !points?.length) return;
 
-    const CanvasLayer = L.Layer.extend({
-      onAdd(m) {
-        const canvas = L.DomUtil.create("canvas", "");
-        canvas.style.cssText = "position:absolute;top:0;left:0;pointer-events:none;z-index:400;opacity:0.65;";
-        m.getPanes().overlayPane.appendChild(canvas);
-        canvasRef.current = canvas;
-        m.on("moveend zoomend resize", this._draw, this);
-        this._draw();
-      },
-      onRemove(m) {
-        if (canvasRef.current) canvasRef.current.remove();
-        m.off("moveend zoomend resize", this._draw, this);
-      },
-      _draw() {
-        const canvas = canvasRef.current;
-        if (!canvas) return;
-        const size = map.getSize();
-        canvas.width = size.x;
-        canvas.height = size.y;
-        const ctx = canvas.getContext("2d");
-        ctx.clearRect(0, 0, size.x, size.y);
-        points.forEach(({ lat, lon, intensity }) => {
+    // Create canvas and append to map container directly
+    const container = map.getContainer();
+    const canvas = document.createElement("canvas");
+    canvas.style.cssText = "position:absolute;top:0;left:0;pointer-events:none;z-index:450;opacity:0;transition:opacity 0.5s;";
+    container.appendChild(canvas);
+    canvasRef.current = canvas;
+
+    // Fade in
+    requestAnimationFrame(() => { canvas.style.opacity = "0.7"; });
+
+    const draw = () => {
+      if (!canvas || !map) return;
+      const size = map.getSize();
+      canvas.width  = size.x;
+      canvas.height = size.y;
+      const ctx = canvas.getContext("2d");
+      ctx.clearRect(0, 0, size.x, size.y);
+
+      points.forEach(({ lat, lon, intensity }) => {
+        try {
           const pt = map.latLngToContainerPoint([lat, lon]);
-          const r = 30 + intensity * 40;
+          const r = 25 + intensity * 45;
           const grad = ctx.createRadialGradient(pt.x, pt.y, 0, pt.x, pt.y, r);
           if (intensity > 0.5) {
-            grad.addColorStop(0, `rgba(255,107,107,${intensity * 0.75})`);
+            grad.addColorStop(0, `rgba(255,107,107,${(intensity * 0.8).toFixed(2)})`);
+            grad.addColorStop(0.5, `rgba(255,107,107,${(intensity * 0.3).toFixed(2)})`);
             grad.addColorStop(1, "rgba(255,107,107,0)");
           } else {
-            grad.addColorStop(0, `rgba(100,255,218,${intensity * 0.65})`);
+            grad.addColorStop(0, `rgba(100,255,218,${(intensity * 0.7).toFixed(2)})`);
+            grad.addColorStop(0.5, `rgba(100,255,218,${(intensity * 0.25).toFixed(2)})`);
             grad.addColorStop(1, "rgba(100,255,218,0)");
           }
           ctx.fillStyle = grad;
           ctx.beginPath();
           ctx.arc(pt.x, pt.y, r, 0, Math.PI * 2);
           ctx.fill();
-        });
-      },
-    });
+        } catch {}
+      });
+    };
 
-    layerRef.current = new CanvasLayer();
-    map.addLayer(layerRef.current);
+    draw();
+    map.on("move zoom resize moveend zoomend", draw);
 
     return () => {
-      if (layerRef.current) { map.removeLayer(layerRef.current); layerRef.current = null; }
+      map.off("move zoom resize moveend zoomend", draw);
+      if (canvas.parentNode) canvas.parentNode.removeChild(canvas);
+      canvasRef.current = null;
     };
   }, [map, location, visible, points]);
 
@@ -188,7 +186,7 @@ export default function MapView() {
               ? {background:"rgba(100,255,218,0.1)",borderColor:"rgba(100,255,218,0.3)",color:"#64FFDA"}
               : {background:"rgba(6,15,30,0.8)",borderColor:"rgba(100,255,218,0.1)",color:"rgba(136,146,176,0.5)"}}
           >
-            {showOverlay ? "🔥 Hide Heatmap" : "🔥 Show Heatmap"}
+            {showOverlay ? "Hide Heatmap" : "Show Heatmap"}
           </motion.button>
         </div>
       )}
@@ -197,7 +195,10 @@ export default function MapView() {
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-[500]">
           <div className="px-8 py-6 text-center rounded-2xl"
             style={{background:"rgba(6,15,30,0.9)",border:"1px solid rgba(100,255,218,0.15)",backdropFilter:"blur(12px)"}}>
-            <div className="text-3xl mb-3">🛰️</div>
+            <div className="w-8 h-8 rounded-full flex items-center justify-center mb-3"
+              style={{background:"rgba(100,255,218,0.1)",border:"1px solid rgba(100,255,218,0.2)"}}>
+              <span className="text-sm font-mono" style={{color:"#64FFDA"}}>◎</span>
+            </div>
             <p className="text-sm font-semibold" style={{color:"#CCD6F6"}}>Select a Location</p>
             <p className="text-xs mt-1.5" style={{color:"rgba(136,146,176,0.6)"}}>Click anywhere on the map or search in the sidebar</p>
           </div>
