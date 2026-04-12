@@ -9,6 +9,41 @@ import AlertBanner from "./components/AlertBanner";
 import { AnalysisProvider } from "./context/AnalysisContext";
 import { useAnalysis } from "./context/AnalysisContext";
 
+function FloatingPanel() {
+  const [open, setOpen] = useState(true);
+  const { analysisComplete, result } = useAnalysis();
+
+  return (
+    <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-[600]" style={{width:"min(860px,95vw)"}}>
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{opacity:0,y:20}} animate={{opacity:1,y:0}} exit={{opacity:0,y:20}}
+            transition={{type:"spring",damping:25,stiffness:200}}
+            className="rounded-2xl overflow-hidden shadow-2xl"
+            style={{background:"rgba(6,15,30,0.95)",border:"1px solid rgba(100,255,218,0.12)",backdropFilter:"blur(16px)"}}>
+            <ControlPanel />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Toggle button */}
+      <div className="flex justify-center mt-2">
+        <button onClick={() => setOpen(v => !v)}
+          className="px-4 py-1.5 rounded-full text-xs font-mono transition-all"
+          style={{
+            background:"rgba(6,15,30,0.9)",
+            border:"1px solid rgba(100,255,218,0.15)",
+            color:"rgba(100,255,218,0.7)",
+            backdropFilter:"blur(8px)",
+          }}>
+          {open ? "▼ Hide Controls" : "▲ Show Controls"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function AppShell() {
   const [activeTab, setActiveTab] = useState("map");
   const { analysisComplete, loading, location, yearFrom, yearTo, result } = useAnalysis();
@@ -115,16 +150,10 @@ function AppShell() {
       <AlertBanner />
 
       {/* ── Main Content ── */}
-      <div className="flex-1 flex overflow-hidden">
+      <div className="flex-1 overflow-hidden relative">
 
-        {/* Left sidebar */}
-        <aside className="w-68 flex-shrink-0 flex flex-col overflow-hidden border-r"
-          style={{width:"272px",background:"#060F1E",borderColor:"rgba(100,255,218,0.06)"}}>
-          <ControlPanel />
-        </aside>
-
-        {/* Content area */}
-        <main className="flex-1 overflow-hidden relative">
+        {/* Content area — full width */}
+        <div className="absolute inset-0">
           <AnimatePresence mode="wait">
 
             {activeTab === "map" && (
@@ -138,7 +167,7 @@ function AppShell() {
 
             {activeTab === "insights" && (
               <motion.div key="insights"
-                initial={{opacity:0, y:16}} animate={{opacity:1, y:0}} exit={{opacity:0, y:-16}}
+                initial={{opacity:0,y:16}} animate={{opacity:1,y:0}} exit={{opacity:0,y:-16}}
                 transition={{duration:0.25}}
                 className="absolute inset-0 overflow-y-auto panel-scroll"
                 style={{background:"#0A192F"}}>
@@ -150,7 +179,7 @@ function AppShell() {
 
             {activeTab === "compare" && (
               <motion.div key="compare"
-                initial={{opacity:0, y:16}} animate={{opacity:1, y:0}} exit={{opacity:0, y:-16}}
+                initial={{opacity:0,y:16}} animate={{opacity:1,y:0}} exit={{opacity:0,y:-16}}
                 transition={{duration:0.25}}
                 className="absolute inset-0"
                 style={{background:"#0A192F"}}>
@@ -159,7 +188,12 @@ function AppShell() {
             )}
 
           </AnimatePresence>
-        </main>
+        </div>
+
+        {/* Floating bottom control panel — only on map tab */}
+        {activeTab === "map" && (
+          <FloatingPanel />
+        )}
       </div>
     </div>
   );

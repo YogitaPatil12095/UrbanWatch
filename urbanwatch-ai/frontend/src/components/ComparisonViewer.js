@@ -3,209 +3,194 @@ import { motion } from "framer-motion";
 import { ReactCompareSlider, ReactCompareSliderImage } from "react-compare-slider";
 import { useAnalysis } from "../context/AnalysisContext";
 
-// Free OpenStreetMap static-like tile (we use a canvas-rendered placeholder when no real image)
-function SatellitePlaceholder({ year, label, color }) {
+const API_URL = process.env.REACT_APP_API_URL || "http://localhost:8000";
+
+function Placeholder({ year, label }) {
   return (
-    <div
-      className="w-full h-full flex items-center justify-center relative"
-      style={{
-        background: `radial-gradient(ellipse at 50% 50%, #0f1629 0%, #050810 100%)`,
-      }}
-    >
-      {/* Synthetic grid pattern */}
-      <svg className="absolute inset-0 w-full h-full opacity-20" xmlns="http://www.w3.org/2000/svg">
+    <div className="w-full h-full flex flex-col items-center justify-center"
+      style={{background:"#060F1E"}}>
+      <svg className="absolute inset-0 w-full h-full opacity-10" xmlns="http://www.w3.org/2000/svg">
         <defs>
-          <pattern id={`grid-${year}`} width="40" height="40" patternUnits="userSpaceOnUse">
-            <path d="M 40 0 L 0 0 0 40" fill="none" stroke={color} strokeWidth="0.5" />
+          <pattern id={`g${year}`} width="40" height="40" patternUnits="userSpaceOnUse">
+            <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#64FFDA" strokeWidth="0.4"/>
           </pattern>
         </defs>
-        <rect width="100%" height="100%" fill={`url(#grid-${year})`} />
+        <rect width="100%" height="100%" fill={`url(#g${year})`}/>
       </svg>
-      <div className="text-center z-10">
-        <div className="text-4xl mb-2">🛰️</div>
-        <p className="text-xs font-mono" style={{ color }}>{label}</p>
-        <p className="text-[10px] text-slate-600 font-mono mt-1">Satellite imagery loads after analysis</p>
-      </div>
+      <div className="text-3xl mb-3 relative z-10">🛰️</div>
+      <p className="text-sm font-mono relative z-10" style={{color:"rgba(100,255,218,0.6)"}}>{label}</p>
+      <p className="text-xs font-mono mt-1 relative z-10" style={{color:"rgba(136,146,176,0.4)"}}>
+        Satellite imagery from NASA GIBS
+      </p>
+    </div>
+  );
+}
+
+function Label({ children, side = "left" }) {
+  return (
+    <div className={`absolute top-4 ${side === "left" ? "left-4" : "right-4"} z-10 px-3 py-1.5 rounded-lg`}
+      style={{background:"rgba(6,15,30,0.85)",border:"1px solid rgba(100,255,218,0.2)",backdropFilter:"blur(8px)"}}>
+      <span className="text-xs font-mono" style={{color:"#64FFDA"}}>{children}</span>
     </div>
   );
 }
 
 export default function ComparisonViewer() {
   const { imageFrom, imageTo, changeMap, analysisComplete, location, yearFrom, yearTo } = useAnalysis();
-  const [viewMode, setViewMode] = useState("slider"); // slider | sidebyside | overlay
+  const [viewMode, setViewMode] = useState("slider");
 
   if (!analysisComplete) {
     return (
-      <div className="flex flex-col items-center justify-center h-full text-center p-8">
+      <div className="flex flex-col items-center justify-center h-full text-center p-8"
+        style={{background:"#0A192F"}}>
         <div className="text-5xl mb-4">🔍</div>
-        <p className="text-slate-400 font-mono text-sm">Run an analysis to compare satellite images</p>
-        <p className="text-slate-600 font-mono text-xs mt-2">Before/after imagery will appear here</p>
+        <p className="text-sm font-semibold" style={{color:"#CCD6F6"}}>No analysis yet</p>
+        <p className="text-xs mt-2" style={{color:"rgba(136,146,176,0.5)"}}>
+          Run an analysis to compare satellite images
+        </p>
       </div>
     );
   }
 
-  // Use real images from API backend (served as /static/images/...)
-  const API_URL = process.env.REACT_APP_API_URL || "http://localhost:8000";
+  // Prepend API_URL to all image paths
   const beforeUrl = imageFrom ? `${API_URL}${imageFrom}` : null;
-  const afterUrl = imageTo ? `${API_URL}${imageTo}` : null;
+  const afterUrl  = imageTo   ? `${API_URL}${imageTo}`   : null;
+  const changeUrl = changeMap ? `${API_URL}${changeMap}` : null;
+
+  const modes = [
+    { id: "slider",     label: "Slider",      icon: "↔️" },
+    { id: "sidebyside", label: "Side by Side", icon: "▪️▪️" },
+    { id: "overlay",    label: "Change Map",   icon: "🔥" },
+  ];
 
   return (
-    <div className="flex flex-col h-full">
-      {/* Controls bar */}
-      <div className="flex-shrink-0 flex items-center justify-between px-6 py-3 border-b border-white/5 bg-dark-800/50">
+    <div className="flex flex-col h-full" style={{background:"#0A192F"}}>
+
+      {/* Header */}
+      <div className="flex-shrink-0 flex items-center justify-between px-6 py-3 border-b"
+        style={{background:"#060F1E",borderColor:"rgba(100,255,218,0.08)"}}>
         <div>
-          <h2 className="text-sm font-mono font-semibold text-slate-300">
+          <h2 className="text-sm font-semibold" style={{color:"#CCD6F6"}}>
             Before / After Comparison
           </h2>
-          <p className="text-xs text-slate-500 font-mono">
-            📍 {location?.name} &nbsp;|&nbsp;
-            <span className="text-neon-blue">{yearFrom}</span>
-            {" → "}
-            <span className="text-neon-pink">{yearTo}</span>
+          <p className="text-xs font-mono mt-0.5" style={{color:"rgba(136,146,176,0.5)"}}>
+            📍 {location?.name?.split(",")[0]} &nbsp;·&nbsp;
+            <span style={{color:"#64FFDA"}}>{yearFrom}</span>
+            <span style={{color:"rgba(136,146,176,0.4)"}}> → </span>
+            <span style={{color:"#CCD6F6"}}>{yearTo}</span>
           </p>
         </div>
 
-        {/* View mode toggle */}
-        <div className="flex items-center gap-1 bg-dark-700/50 rounded-xl p-1 border border-white/5">
-          {[
-            { id: "slider", label: "Slider", icon: "↔️" },
-            { id: "sidebyside", label: "Side by Side", icon: "⬜" },
-            { id: "overlay", label: "Change Map", icon: "🔥" },
-          ].map((m) => (
-            <button
-              key={m.id}
-              onClick={() => setViewMode(m.id)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-mono transition-all ${
-                viewMode === m.id
-                  ? "bg-neon-blue/20 text-neon-blue border border-neon-blue/30"
-                  : "text-slate-400 hover:text-slate-200"
-              }`}
-            >
+        {/* Mode toggle */}
+        <div className="flex items-center gap-1 rounded-xl p-1"
+          style={{background:"rgba(10,25,47,0.8)",border:"1px solid rgba(100,255,218,0.08)"}}>
+          {modes.map((m) => (
+            <button key={m.id} onClick={() => setViewMode(m.id)}
+              className="px-4 py-1.5 rounded-lg text-xs font-semibold transition-all"
+              style={{
+                background:  viewMode === m.id ? "linear-gradient(135deg,#64FFDA,#3DBFA3)" : "transparent",
+                color:       viewMode === m.id ? "#0A192F" : "rgba(136,146,176,0.7)",
+              }}>
               {m.icon} {m.label}
             </button>
           ))}
         </div>
       </div>
 
-      {/* Viewer area */}
+      {/* Viewer */}
       <div className="flex-1 overflow-hidden relative">
+
+        {/* ── Slider ── */}
         {viewMode === "slider" && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="w-full h-full"
-          >
+          <motion.div initial={{opacity:0}} animate={{opacity:1}} className="w-full h-full">
             {beforeUrl && afterUrl ? (
-              <ReactCompareSlider
-                style={{ width: "100%", height: "100%" }}
+              <ReactCompareSlider style={{width:"100%",height:"100%"}}
                 itemOne={
                   <div className="relative w-full h-full">
-                    <ReactCompareSliderImage src={beforeUrl} alt={`Satellite ${yearFrom}`} style={{ objectFit: "cover" }} />
-                    <div className="absolute top-4 left-4 glass-card px-3 py-1.5 border border-neon-blue/30">
-                      <span className="text-xs font-mono text-neon-blue">{yearFrom} — Before</span>
-                    </div>
+                    <ReactCompareSliderImage src={beforeUrl} alt={`${yearFrom}`}
+                      style={{objectFit:"cover",width:"100%",height:"100%"}} />
+                    <Label side="left">{yearFrom} — Before</Label>
                   </div>
                 }
                 itemTwo={
                   <div className="relative w-full h-full">
-                    <ReactCompareSliderImage src={afterUrl} alt={`Satellite ${yearTo}`} style={{ objectFit: "cover" }} />
-                    <div className="absolute top-4 right-4 glass-card px-3 py-1.5 border border-neon-pink/30">
-                      <span className="text-xs font-mono text-neon-pink">{yearTo} — After</span>
-                    </div>
+                    <ReactCompareSliderImage src={afterUrl} alt={`${yearTo}`}
+                      style={{objectFit:"cover",width:"100%",height:"100%"}} />
+                    <Label side="right">{yearTo} — After</Label>
                   </div>
                 }
               />
             ) : (
-              <ReactCompareSlider
-                style={{ width: "100%", height: "100%" }}
-                itemOne={
-                  <div className="relative w-full h-full">
-                    <SatellitePlaceholder year={yearFrom} label={`${yearFrom} — Before`} color="#00d4ff" />
-                  </div>
-                }
-                itemTwo={
-                  <div className="relative w-full h-full">
-                    <SatellitePlaceholder year={yearTo} label={`${yearTo} — After`} color="#ff006e" />
-                  </div>
-                }
+              <ReactCompareSlider style={{width:"100%",height:"100%"}}
+                itemOne={<Placeholder year={yearFrom} label={`${yearFrom} — Before`} />}
+                itemTwo={<Placeholder year={yearTo}   label={`${yearTo} — After`} />}
               />
             )}
           </motion.div>
         )}
 
+        {/* ── Side by Side ── */}
         {viewMode === "sidebyside" && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="grid grid-cols-2 h-full gap-1"
-          >
+          <motion.div initial={{opacity:0}} animate={{opacity:1}}
+            className="grid grid-cols-2 h-full" style={{gap:"2px",background:"#060F1E"}}>
             <div className="relative overflow-hidden">
               {beforeUrl
                 ? <img src={beforeUrl} alt={`Before ${yearFrom}`} className="w-full h-full object-cover" />
-                : <SatellitePlaceholder year={yearFrom} label={`${yearFrom} — Before`} color="#00d4ff" />
+                : <Placeholder year={yearFrom} label={`${yearFrom} — Before`} />
               }
-              <div className="absolute top-4 left-4 glass-card px-3 py-1.5 border border-neon-blue/30">
-                <span className="text-xs font-mono text-neon-blue">{yearFrom} — Before</span>
-              </div>
+              <Label side="left">{yearFrom} — Before</Label>
             </div>
             <div className="relative overflow-hidden">
               {afterUrl
                 ? <img src={afterUrl} alt={`After ${yearTo}`} className="w-full h-full object-cover" />
-                : <SatellitePlaceholder year={yearTo} label={`${yearTo} — After`} color="#ff006e" />
+                : <Placeholder year={yearTo} label={`${yearTo} — After`} />
               }
-              <div className="absolute top-4 right-4 glass-card px-3 py-1.5 border border-neon-pink/30">
-                <span className="text-xs font-mono text-neon-pink">{yearTo} — After</span>
-              </div>
+              <Label side="right">{yearTo} — After</Label>
             </div>
           </motion.div>
         )}
 
+        {/* ── Change Map Overlay ── */}
         {viewMode === "overlay" && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="relative w-full h-full"
-          >
+          <motion.div initial={{opacity:0}} animate={{opacity:1}}
+            className="relative w-full h-full">
+            {/* Base: after image */}
             {afterUrl
-              ? <img src={afterUrl} alt="Base" className="w-full h-full object-cover" />
-              : <SatellitePlaceholder year={yearTo} label={`${yearTo} — After`} color="#ff006e" />
+              ? <img src={afterUrl} alt="Base satellite" className="w-full h-full object-cover" />
+              : <Placeholder year={yearTo} label={`${yearTo} — After`} />
             }
             {/* Change map overlay */}
-            {changeMap ? (
-              <img
-                src={changeMap}
-                alt="Change detection overlay"
-                className="absolute inset-0 w-full h-full object-cover mix-blend-screen opacity-70"
-              />
-            ) : (
-              /* Synthetic overlay when no real change map */
-              <div
-                className="absolute inset-0"
-                style={{
-                  background: "radial-gradient(ellipse at 40% 50%, rgba(255,0,110,0.3) 0%, transparent 60%), radial-gradient(ellipse at 70% 30%, rgba(0,212,255,0.2) 0%, transparent 50%)",
-                }}
+            {changeUrl && (
+              <img src={changeUrl} alt="Change detection"
+                className="absolute inset-0 w-full h-full object-cover"
+                style={{mixBlendMode:"screen",opacity:0.75}}
+                onError={(e) => { e.target.style.display = "none"; }}
               />
             )}
-            <div className="absolute top-4 left-4 glass-card px-3 py-1.5 border border-neon-pink/30">
-              <span className="text-xs font-mono text-neon-pink">Change Detection Overlay</span>
-            </div>
+            {/* Fallback synthetic overlay if no change map */}
+            {!changeUrl && (
+              <div className="absolute inset-0" style={{
+                background:"radial-gradient(ellipse at 40% 50%,rgba(255,107,107,0.25) 0%,transparent 55%),radial-gradient(ellipse at 70% 30%,rgba(100,255,218,0.15) 0%,transparent 45%)"
+              }} />
+            )}
+
+            <Label side="left">Change Detection Overlay</Label>
+
             {/* Legend */}
-            <div className="absolute bottom-6 left-6 glass-card p-3 border border-white/10">
-              <p className="text-[10px] font-mono text-slate-500 mb-2">CHANGE TYPE</p>
-              <div className="space-y-1.5">
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-sm bg-neon-pink/70" />
-                  <span className="text-[10px] font-mono text-slate-400">Urban expansion</span>
+            <div className="absolute bottom-6 left-6 px-4 py-3 rounded-xl"
+              style={{background:"rgba(6,15,30,0.9)",border:"1px solid rgba(100,255,218,0.15)",backdropFilter:"blur(8px)"}}>
+              <p className="text-[9px] font-mono uppercase tracking-widest mb-2"
+                style={{color:"rgba(100,255,218,0.5)"}}>Change Type</p>
+              {[
+                {color:"#FF6B6B", label:"Urban expansion"},
+                {color:"#64FFDA", label:"Infrastructure"},
+                {color:"#ffc107", label:"Vegetation loss"},
+              ].map((item) => (
+                <div key={item.label} className="flex items-center gap-2 mb-1.5 last:mb-0">
+                  <div className="w-2.5 h-2.5 rounded-sm" style={{background:item.color,opacity:0.8}} />
+                  <span className="text-[10px] font-mono" style={{color:"rgba(204,214,246,0.6)"}}>{item.label}</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-sm bg-neon-blue/70" />
-                  <span className="text-[10px] font-mono text-slate-400">Infrastructure</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-sm bg-yellow-500/70" />
-                  <span className="text-[10px] font-mono text-slate-400">Vegetation loss</span>
-                </div>
-              </div>
+              ))}
             </div>
           </motion.div>
         )}
