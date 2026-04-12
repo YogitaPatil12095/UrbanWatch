@@ -43,19 +43,15 @@ function RealChangeOverlay({ location, changeMapUrl, visible }) {
     }
     if (overlayRef.current) map.removeLayer(overlayRef.current);
 
-    // Calculate bounding box from tile zoom 8 (matches backend tile fetch)
-    // Each tile at zoom 8 in EPSG4326 covers 360/256 = 1.40625° lon, 180/128 = 1.40625° lat
-    const tileSize = 1.40625; // degrees per tile at zoom 8
+    const tileSize = 1.40625;
     const bounds = [
       [location.lat - tileSize * 1.5, location.lon - tileSize * 1.5],
       [location.lat + tileSize * 1.5, location.lon + tileSize * 1.5],
     ];
 
-    const imageUrl = `${API_URL}${changeMapUrl}`;
-    overlayRef.current = L.imageOverlay(imageUrl, bounds, {
+    overlayRef.current = L.imageOverlay(`${API_URL}${changeMapUrl}`, bounds, {
       opacity: 0.6,
       interactive: false,
-      className: "change-map-overlay",
     });
     map.addLayer(overlayRef.current);
 
@@ -66,6 +62,8 @@ function RealChangeOverlay({ location, changeMapUrl, visible }) {
 
   return null;
 }
+
+function HeatmapOverlay({ location, visible, points }) {
   const map = useMap();
   const canvasRef = useRef(null);
   const layerRef = useRef(null);
@@ -98,7 +96,6 @@ function RealChangeOverlay({ location, changeMapUrl, visible }) {
         canvas.height = size.y;
         const ctx = canvas.getContext("2d");
         ctx.clearRect(0, 0, size.x, size.y);
-
         points.forEach(({ lat, lon, intensity }) => {
           const pt = map.latLngToContainerPoint([lat, lon]);
           const r = 30 + intensity * 40;
@@ -133,23 +130,17 @@ export default function MapView() {
   const { location, setLocation, analysisComplete, result, changeMap } = useAnalysis();
   const [showOverlay, setShowOverlay] = React.useState(true);
 
-  // Build heatmap points from REAL analysis stats
   const heatmapPoints = useMemo(() => {
     if (!analysisComplete || !location || !result) return [];
-
     const rng = (seed) => { let x = Math.sin(seed) * 10000; return x - Math.floor(x); };
     const changePct  = result.change_pct  || 10;
     const urbanPct   = result.urban_pct   || 5;
     const anomalyPct = result.anomaly_pct || 3;
-
-    // Spread proportional to how much changed — different cities get different spreads
     const spread  = 0.03 + (changePct / 100) * 0.07;
     const nPoints = Math.max(30, Math.min(120, Math.round(changePct * 4)));
-
     return Array.from({ length: nPoints }, (_, i) => ({
       lat: location.lat + (rng(i * 3.1 + changePct) - 0.5) * spread,
       lon: location.lon + (rng(i * 7.3 + urbanPct)  - 0.5) * spread,
-      // Intensity driven by anomaly — high anomaly = more red, low = more blue
       intensity: Math.min(1, rng(i * 13.7 + anomalyPct) * (0.3 + anomalyPct / 20)),
     }));
   }, [analysisComplete, location, result]);
@@ -180,16 +171,8 @@ export default function MapView() {
         )}
         {analysisComplete && (
           <>
-            <RealChangeOverlay
-              location={location}
-              changeMapUrl={changeMap}
-              visible={showOverlay}
-            />
-            <HeatmapOverlay
-              location={location}
-              visible={showOverlay}
-              points={heatmapPoints}
-            />
+            <RealChangeOverlay location={location} changeMapUrl={changeMap} visible={showOverlay} />
+            <HeatmapOverlay location={location} visible={showOverlay} points={heatmapPoints} />
           </>
         )}
       </MapContainer>
