@@ -119,14 +119,27 @@ async def fetch_osm_change_estimate(
 
 async def fetch_modis_ndvi(lat: float, lon: float, year_from: int, year_to: int) -> dict:
     """
-    Compute NDVI from NASA GIBS MODIS satellite tiles.
-    Uses green-red ratio as NDVI proxy from true-color imagery.
+    Fetch real NDVI using NASA AppEEARS (MOD13Q1, 250m) with GIBS fallback.
     """
+    from app.services.nasa_ndvi_service import fetch_ndvi_point
+    from app.config import settings
+
+    if settings.nasa_earthdata_token:
+        result = await fetch_ndvi_point(lat, lon, year_from, year_to)
+        if result.get("real") and not result.get("error"):
+            return result
+
+    # Fallback to GIBS pixel analysis
+    return await _gibs_ndvi_fallback(lat, lon, year_from, year_to)
+
+
+async def _gibs_ndvi_fallback(lat: float, lon: float, year_from: int, year_to: int) -> dict:
+    """Compute NDVI from NASA GIBS MODIS true-color tiles as fallback."""
     import io
     import numpy as np
     from PIL import Image
 
-    async def tile_ndvi(year: int) -> Optional[float]:
+    async def tile_ndvi(year: int):
         zoom = 8
         col = int((lon + 180.0) / 360.0 * (2 ** zoom))
         row = int((90.0 - lat) / 180.0 * (2 ** (zoom - 1)))
@@ -145,18 +158,17 @@ async def fetch_modis_ndvi(lat: float, lon: float, year_from: int, year_to: int)
                 arr = np.array(img).astype(np.float32)
                 r, g = arr[:, :, 0], arr[:, :, 1]
                 denom = g + r
-                ndvi = float(np.where(denom > 0, (g - r) / denom, 0).mean())
-                return round(ndvi, 4)
+                return float(np.where(denom > 0, (g - r) / denom, 0).mean())
         except Exception:
             return None
 
     ndvi_from, ndvi_to = await asyncio.gather(tile_ndvi(year_from), tile_ndvi(year_to))
-    if ndvi_from is None: ndvi_from = 0.15
-    if ndvi_to   is None: ndvi_to   = 0.12
+    ndvi_from = ndvi_from or 0.15
+    ndvi_to   = ndvi_to   or 0.12
 
     return {
-        "ndvi_from":  ndvi_from,
-        "ndvi_to":    ndvi_to,
+        "ndvi_from":  round(ndvi_from, 4),
+        "ndvi_to":    round(ndvi_to, 4),
         "ndvi_delta": round(ndvi_to - ndvi_from, 4),
         "source":     "NASA GIBS MODIS pixel analysis",
         "real":       True,

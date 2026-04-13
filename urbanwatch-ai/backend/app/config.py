@@ -11,6 +11,9 @@ class Settings(BaseSettings):
     sentinelhub_client_id: str = ""
     sentinelhub_client_secret: str = ""
 
+    # NASA Earthdata
+    nasa_earthdata_token: str = ""
+
     # App
     cors_origins: str = "http://localhost:3000"
     port: int = 8000
