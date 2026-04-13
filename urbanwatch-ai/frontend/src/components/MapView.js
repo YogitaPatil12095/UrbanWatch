@@ -37,21 +37,22 @@ function RealChangeOverlay({ location, changeMapUrl, visible }) {
   const API_URL = process.env.REACT_APP_API_URL || "http://localhost:8000";
 
   useEffect(() => {
-    if (!visible || !location || !changeMapUrl) {
-      if (overlayRef.current) { map.removeLayer(overlayRef.current); overlayRef.current = null; }
-      return;
-    }
-    if (overlayRef.current) map.removeLayer(overlayRef.current);
+    if (overlayRef.current) { map.removeLayer(overlayRef.current); overlayRef.current = null; }
+    if (!visible || !location || !changeMapUrl) return;
 
-    const tileSize = 1.40625;
+    // Backend stitches a 3x3 grid of zoom-8 EPSG4326 tiles
+    // Each tile at zoom 8 = 360/256 = 1.40625° wide, 180/128 = 1.40625° tall
+    // 3 tiles = 4.21875° in each direction, centered on location
+    const half = 1.40625 * 1.5; // 3 tiles / 2
     const bounds = [
-      [location.lat - tileSize * 1.5, location.lon - tileSize * 1.5],
-      [location.lat + tileSize * 1.5, location.lon + tileSize * 1.5],
+      [location.lat - half, location.lon - half],
+      [location.lat + half, location.lon + half],
     ];
 
     overlayRef.current = L.imageOverlay(`${API_URL}${changeMapUrl}`, bounds, {
-      opacity: 0.6,
+      opacity: 0.65,
       interactive: false,
+      className: "change-overlay",
     });
     map.addLayer(overlayRef.current);
 
@@ -128,21 +129,7 @@ export default function MapView() {
   const { location, setLocation, analysisComplete, result, changeMap } = useAnalysis();
   const [showOverlay, setShowOverlay] = React.useState(true);
 
-  const heatmapPoints = useMemo(() => {
-    if (!analysisComplete || !location || !result) return [];
-    const rng = (seed) => { let x = Math.sin(seed) * 10000; return x - Math.floor(x); };
-    const changePct  = result.change_pct  || 10;
-    const urbanPct   = result.urban_pct   || 5;
-    const anomalyPct = result.anomaly_pct || 3;
-    const spread  = 0.03 + (changePct / 100) * 0.07;
-    const nPoints = Math.max(30, Math.min(120, Math.round(changePct * 4)));
-    return Array.from({ length: nPoints }, (_, i) => ({
-      lat: location.lat + (rng(i * 3.1 + changePct) - 0.5) * spread,
-      lon: location.lon + (rng(i * 7.3 + urbanPct)  - 0.5) * spread,
-      intensity: Math.min(1, rng(i * 13.7 + anomalyPct) * (0.3 + anomalyPct / 20)),
-    }));
-  }, [analysisComplete, location, result]);
-
+  // No fake random points — use real change map image overlay only
   const handleMapClick = ({ lat, lng }) => {
     setLocation({ lat, lon: lng, name: `${lat.toFixed(4)}°N, ${lng.toFixed(4)}°E` });
   };
@@ -168,10 +155,7 @@ export default function MapView() {
           </>
         )}
         {analysisComplete && (
-          <>
-            <RealChangeOverlay location={location} changeMapUrl={changeMap} visible={showOverlay} />
-            <HeatmapOverlay location={location} visible={showOverlay} points={heatmapPoints} />
-          </>
+          <RealChangeOverlay location={location} changeMapUrl={changeMap} visible={showOverlay} />
         )}
       </MapContainer>
 
