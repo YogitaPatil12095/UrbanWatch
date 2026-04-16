@@ -84,22 +84,24 @@ async def full_analysis(req: AnalyzeRequest):
         ndvi_delta  = float((ndvi - ndvi_before).mean())
 
         # Derive urban_pct and vegetation_pct from spectral indices
-        # (used when basic mode doesn't compute them directly)
         if cd_result.get("urban_pct", 0) == 0 and cd_result.get("vegetation_pct", 0) == 0:
             ndbi_before = compute_ndbi(img_before)
             ndbi_delta  = ndbi - ndbi_before
             ndvi_loss   = ndvi_before - ndvi  # positive = vegetation lost
 
-            # Urban: NDBI increased AND NDVI decreased (built-up replacing green)
-            urban_mask = (ndbi_delta > 0.03) & (ndvi_loss > 0.01)
+            # Use looser thresholds for MODIS 250m data
+            # Urban: NDBI increased (any amount) AND NDVI decreased
+            urban_mask = (ndbi_delta > 0.005) & (ndvi_loss > 0.005)
             urban_pct  = float(urban_mask.mean() * 100)
 
-            # Vegetation loss: NDVI dropped significantly but NOT classified as urban
-            veg_mask   = (ndvi_loss > 0.01) & ~urban_mask
+            # Vegetation loss: NDVI dropped but NOT classified as urban
+            veg_mask   = (ndvi_loss > 0.005) & ~urban_mask
             veg_pct    = float(veg_mask.mean() * 100)
 
-            cd_result["urban_pct"]      = round(urban_pct, 2)
-            cd_result["vegetation_pct"] = round(veg_pct, 2)
+            # Scale by actual change percentage to avoid inflated numbers
+            scale = min(1.0, cd_result["change_pct"] / 20.0)
+            cd_result["urban_pct"]      = round(urban_pct * scale, 2)
+            cd_result["vegetation_pct"] = round(veg_pct * scale, 2)
 
         # 4. K-Means land cover
         km_before = kmeans_land_cover(img_before, n_clusters=5)

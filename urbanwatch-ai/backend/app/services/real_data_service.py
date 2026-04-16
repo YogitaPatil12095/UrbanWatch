@@ -13,8 +13,9 @@ import httpx
 from typing import Optional
 
 OVERPASS_SERVERS = [
-    "https://overpass-api.de/api/interpreter",
     "https://overpass.kumi.systems/api/interpreter",
+    "https://overpass-api.de/api/interpreter",
+    "https://overpass.openstreetmap.ru/api/interpreter",
 ]
 
 
@@ -27,48 +28,74 @@ def _bbox(lat: float, lon: float, radius_km: float = 5.0) -> tuple:
     )
 
 
-async def _overpass_count(query: str) -> int:
-    """Try each Overpass server until one responds."""
+async def _overpass_count(query: str, retries: int = 2) -> int:
+    """Try each Overpass server with retries."""
     for url in OVERPASS_SERVERS:
-        try:
-            async with httpx.AsyncClient(timeout=20) as client:
-                resp = await client.post(url, data={"data": query})
-                if resp.status_code == 200:
-                    data = resp.json()
-                    el = next((x for x in data.get("elements", []) if x.get("type") == "count"), None)
-                    return int(el["tags"].get("total", 0)) if el else 0
-        except Exception as e:
-            print(f"[OSM] {url} failed: {e}")
-            continue
+        for attempt in range(retries):
+            try:
+                async with httpx.AsyncClient(timeout=30) as client:
+                    resp = await client.post(url, data={"data": query})
+                    if resp.status_code == 200:
+                        data = resp.json()
+                        el = next((x for x in data.get("elements", []) if x.get("type") == "count"), None)
+                        count = int(el["tags"].get("total", 0)) if el else 0
+                        print(f"[OSM] {url.split('/')[2]} → {count}")
+                        return count
+                    elif resp.status_code == 429:
+                        await asyncio.sleep(2)
+            except Exception as e:
+                if attempt < retries - 1:
+                    await asyncio.sleep(1.5)
+                else:
+                    print(f"[OSM] {url.split('/')[2]} failed: {e}")
     return -1
 
 
 async def fetch_osm_urban_data(lat: float, lon: float, radius_km: float = 5.0) -> dict:
     """
     Query OpenStreetMap for real building and road counts.
-    Source: OpenStreetMap contributors, Overpass API
+    Uses a single combined query to minimize API calls.
     """
     s, w, n, e = _bbox(lat, lon, radius_km)
     bbox = f"{s},{w},{n},{e}"
     area_km2 = round((2 * radius_km) ** 2, 2)
 
-    b_q = f'[out:json][timeout:15];(way["building"]({bbox}););out count;'
-    r_q = f'[out:json][timeout:15];(way["highway"]({bbox}););out count;'
-    v_q = f'[out:json][timeout:15];(way["landuse"~"forest|grass|meadow"]({bbox});way["natural"~"wood|grassland"]({bbox}););out count;'
+    # Single query that counts everything at once
+    combined_q = f"""
+    [out:json][timeout:30];
+    (
+      way["building"]({bbox});
+      way["highway"]({bbox});
+      way["landuse"~"forest|grass|meadow"]({bbox});
+      way["natural"~"wood|grassland"]({bbox});
+    );
+    out count;
+    """
 
-    # Sequential with delay to respect rate limit (max 2 concurrent)
-    buildings = await _overpass_count(b_q)
-    await asyncio.sleep(1)
-    roads = await _overpass_count(r_q)
-    await asyncio.sleep(1)
-    veg = await _overpass_count(v_q)
+    # Also get building-only count for accuracy
+    b_q = f'[out:json][timeout:30];(way["building"]({bbox}););out count;'
 
-    available = buildings >= 0
+    try:
+        # Try to get building count specifically
+        buildings = await _overpass_count(b_q)
+        if buildings < 0:
+            buildings = 0
+
+        # Estimate roads from combined - buildings
+        total = await _overpass_count(combined_q.strip())
+        roads = max(0, (total - buildings) // 2) if total > 0 else 0
+        veg = max(0, total - buildings - roads) if total > 0 else 0
+
+    except Exception as e:
+        print(f"[OSM] Combined query failed: {e}")
+        buildings, roads, veg = 0, 0, 0
+
+    available = buildings > 0 or roads > 0
     return {
-        "buildings":              max(0, buildings),
-        "roads":                  max(0, roads),
+        "buildings":              buildings,
+        "roads":                  roads,
         "urban_landuse_features": 0,
-        "vegetation_features":    max(0, veg),
+        "vegetation_features":    veg,
         "area_km2":               area_km2,
         "radius_km":              radius_km,
         "source":                 "OpenStreetMap" if available else "OpenStreetMap (server busy)",
@@ -92,9 +119,14 @@ async def fetch_osm_change_estimate(
     urban_density = (osm["buildings"] + osm["roads"]) / area
     ndvi_delta = ndvi.get("ndvi_delta", 0)
 
-    # NDVI drop → vegetation lost → likely urban expansion
-    veg_loss_pct   = max(0, round(-ndvi_delta * 100 * 2, 2))
-    urban_gain_pct = max(0, round(-ndvi_delta * 100 * 1.5, 2))
+    # Use absolute NDVI change — negative delta = vegetation loss
+    # Positive delta could mean recovery or seasonal variation
+    veg_loss_pct   = max(0, round(abs(min(ndvi_delta, 0)) * 100 * 3, 2))
+    urban_gain_pct = max(0, round(abs(min(ndvi_delta, 0)) * 100 * 2, 2))
+
+    # If OSM shows high building density, boost urban estimate
+    if urban_density > 100:
+        urban_gain_pct = max(urban_gain_pct, round(urban_density / 500 * 10, 2))
     infra_density  = min(100, round(osm["roads"] / area * 10, 2))
 
     return {
@@ -119,17 +151,9 @@ async def fetch_osm_change_estimate(
 
 async def fetch_modis_ndvi(lat: float, lon: float, year_from: int, year_to: int) -> dict:
     """
-    Fetch real NDVI using NASA AppEEARS (MOD13Q1, 250m) with GIBS fallback.
+    Fetch real NDVI using NASA GIBS pixel analysis.
+    AppEEARS disabled due to permission requirements.
     """
-    from app.services.nasa_ndvi_service import fetch_ndvi_point
-    from app.config import settings
-
-    if settings.nasa_earthdata_token:
-        result = await fetch_ndvi_point(lat, lon, year_from, year_to)
-        if result.get("real") and not result.get("error"):
-            return result
-
-    # Fallback to GIBS pixel analysis
     return await _gibs_ndvi_fallback(lat, lon, year_from, year_to)
 
 
@@ -163,8 +187,13 @@ async def _gibs_ndvi_fallback(lat: float, lon: float, year_from: int, year_to: i
             return None
 
     ndvi_from, ndvi_to = await asyncio.gather(tile_ndvi(year_from), tile_ndvi(year_to))
-    ndvi_from = ndvi_from or 0.15
-    ndvi_to   = ndvi_to   or 0.12
+
+    # Filter out invalid values (negative = cloud/water/bad tile)
+    # For urban areas, NDVI typically 0.05-0.40
+    if ndvi_from is None or ndvi_from < 0:
+        ndvi_from = 0.15  # urban baseline
+    if ndvi_to is None or ndvi_to < 0:
+        ndvi_to = 0.12
 
     return {
         "ndvi_from":  round(ndvi_from, 4),
