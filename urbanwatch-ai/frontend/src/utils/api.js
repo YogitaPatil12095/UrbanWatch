@@ -8,6 +8,14 @@ const api = axios.create({
 });
 
 /**
+ * Get Gemini AI explanation of the analysis
+ */
+export async function fetchExplanation(payload) {
+  const res = await api.post("/explain", payload);
+  return res.data;
+}
+
+/**
  * Fetch real verified stats from OSM + NASA MODIS
  */
 export async function fetchRealStats(lat, lon, yearFrom, yearTo) {

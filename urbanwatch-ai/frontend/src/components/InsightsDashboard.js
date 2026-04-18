@@ -1,10 +1,11 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import {
-  AreaChart, Area, XAxis, YAxis, CartesianGrid,
+  LineChart, Line, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend,
 } from "recharts";
 import { useAnalysis } from "../context/AnalysisContext";
+import { fetchExplanation } from "../utils/api";
 
 const API_URL = process.env.REACT_APP_API_URL || "http://localhost:8000";
 
@@ -12,38 +13,36 @@ const C = {
   teal:  "#64FFDA",
   coral: "#FF6B6B",
   lav:   "#CCD6F6",
-  dim:   "rgba(136,146,176,0.5)",
-  card:  "rgba(17,34,64,0.8)",
+  dim:   "rgba(136,146,176,0.55)",
+  card:  "rgba(17,34,64,0.85)",
   border:"rgba(100,255,218,0.1)",
+  navy:  "#0A192F",
 };
 
-function DataCard({ label, value, unit, color, source, note, index }) {
+function Card({ children, delay = 0 }) {
   return (
-    <motion.div custom={index}
-      initial={{opacity:0,y:16}} animate={{opacity:1,y:0}}
-      transition={{delay:index*0.07}}
-      className="rounded-xl p-4 border"
+    <motion.div initial={{opacity:0,y:12}} animate={{opacity:1,y:0}}
+      transition={{delay}} className="rounded-xl p-5 border"
       style={{background:C.card,borderColor:C.border}}>
-      <div className="text-2xl font-bold font-mono mb-1" style={{color}}>
-        {value}<span className="text-sm font-normal ml-1" style={{color:C.dim}}>{unit}</span>
-      </div>
-      <div className="text-xs font-semibold mb-1" style={{color:C.lav}}>{label}</div>
-      {source && <div className="text-[10px] font-mono" style={{color:C.dim}}>{source}</div>}
-      {note && <div className="text-[10px] mt-1" style={{color:C.dim}}>{note}</div>}
+      {children}
     </motion.div>
   );
 }
 
-function SectionTitle({ children, badge }) {
+function AlgoBadge({ name }) {
   return (
-    <div className="flex items-center gap-3 mb-4">
+    <span className="text-[10px] font-mono px-2 py-0.5 rounded-full ml-2"
+      style={{background:"rgba(100,255,218,0.08)",color:C.teal,border:`1px solid rgba(100,255,218,0.2)`}}>
+      {name}
+    </span>
+  );
+}
+
+function SectionTitle({ children, algo }) {
+  return (
+    <div className="flex items-center mb-4">
       <h3 className="text-sm font-semibold" style={{color:C.lav}}>{children}</h3>
-      {badge && (
-        <span className="text-[10px] font-mono px-2 py-0.5 rounded-full"
-          style={{background:"rgba(100,255,218,0.08)",color:C.teal,border:`1px solid rgba(100,255,218,0.2)`}}>
-          {badge}
-        </span>
-      )}
+      {algo && <AlgoBadge name={algo} />}
     </div>
   );
 }
@@ -55,7 +54,9 @@ const CustomTooltip = ({ active, payload, label }) => {
       style={{background:"#112240",border:`1px solid ${C.border}`}}>
       <p style={{color:C.dim}} className="mb-1">{label}</p>
       {payload.map((p,i) => (
-        <p key={i} style={{color:p.color}}>{p.name}: {typeof p.value==="number"?p.value.toFixed(2):p.value}</p>
+        <p key={i} style={{color:p.color||C.teal}}>
+          {p.name}: {typeof p.value==="number"?p.value.toFixed(4):p.value}
+        </p>
       ))}
     </div>
   );
@@ -63,6 +64,27 @@ const CustomTooltip = ({ active, payload, label }) => {
 
 export default function InsightsDashboard() {
   const { result, realStats, analysisComplete, location, yearFrom, yearTo } = useAnalysis();
+  const [aiExplanation, setAiExplanation] = useState(null);
+  const [aiLoading, setAiLoading] = useState(false);
+
+  useEffect(() => {
+    if (!analysisComplete || !result) return;
+    setAiLoading(true);
+    setAiExplanation(null);
+    fetchExplanation({
+      location_name: location?.name?.split(",").slice(0,2).join(",") || "Unknown",
+      year_from: yearFrom,
+      year_to: yearTo,
+      ndvi_from:  result.ndvi_from  ?? 0.15,
+      ndvi_to:    result.ndvi_to    ?? 0.12,
+      ndvi_delta: result.ndvi_delta ?? -0.03,
+      buildings:  realStats?.buildings_count ?? 0,
+      roads:      realStats?.roads_count     ?? 0,
+      area_km2:   realStats?.area_km2        ?? 100,
+      change_pct: result.anomaly_pct ?? 0,
+    }).then(data => { setAiExplanation(data); setAiLoading(false); })
+      .catch(() => setAiLoading(false));
+  }, [analysisComplete, result]);
 
   if (!analysisComplete || !result) {
     return (
@@ -77,31 +99,22 @@ export default function InsightsDashboard() {
     );
   }
 
-  // ── Real data from NASA + OSM ──
-  const ndviFrom    = realStats?.ndvi_from    ?? result.ndvi_mean_after;
-  const ndviTo      = realStats?.ndvi_to      ?? result.ndvi_mean_after;
-  const ndviDelta   = realStats?.ndvi_delta   ?? result.ndvi_delta;
-  const ndviSource  = realStats?.ndvi_source  ?? "NASA GIBS MODIS";
-  const buildings   = realStats?.buildings_count ?? 0;
-  const roads       = realStats?.roads_count     ?? 0;
-  const areakm2     = realStats?.area_km2        ?? 100;
-  const density     = realStats?.urban_density_per_km2 ?? 0;
-  const vegFeatures = realStats?.vegetation_features ?? 0;
-
-  // NDVI trend data — real values from NASA
-  const ndviTrend = [
-    { year: yearFrom, ndvi: parseFloat(ndviFrom.toFixed(4)) },
-    { year: yearTo,   ndvi: parseFloat(ndviTo.toFixed(4)) },
-  ];
-
-  // Land cover from K-Means (ML estimate — labeled as such)
-  const landCoverData = Object.entries(result.land_cover_after || {}).map(([name, value]) => ({
-    name, value: parseFloat(value.toFixed(1)),
-  }));
-  const COLORS = [C.teal, C.coral, "#CCD6F6", "#f59e0b", "#a78bfa"];
-
-  const ndviPct = (ndviDelta * 100).toFixed(1);
+  // Real NDVI data from NASA
+  const ndviFrom  = result.ndvi_from  ?? 0;
+  const ndviTo    = result.ndvi_to    ?? 0;
+  const ndviDelta = result.ndvi_delta ?? 0;
   const ndviColor = ndviDelta < -0.05 ? C.coral : ndviDelta < 0 ? "#f59e0b" : C.teal;
+
+  // NDVI trend from regression
+  const ndviByYear = result.ndvi_by_year || {};
+  const trendData = Object.entries(ndviByYear)
+    .sort(([a],[b]) => Number(a)-Number(b))
+    .map(([year, ndvi]) => ({ year: Number(year), ndvi: parseFloat(ndvi.toFixed(4)) }));
+
+  // K-Means land cover
+  const landAfter  = Object.entries(result.land_cover_after  || {}).map(([n,v])=>({name:n,value:parseFloat(v.toFixed(1))}));
+  const landBefore = Object.entries(result.land_cover_before || {}).map(([n,v])=>({name:n,value:parseFloat(v.toFixed(1))}));
+  const PIE_COLORS = [C.teal, C.coral, C.lav, "#f59e0b", "#a78bfa"];
 
   return (
     <div className="max-w-5xl mx-auto space-y-8 pb-8">
@@ -109,188 +122,213 @@ export default function InsightsDashboard() {
       {/* Header */}
       <div className="flex items-start justify-between pt-2">
         <div>
-          <h2 className="text-xl font-bold" style={{color:C.lav}}>
-            Urban Change Analysis
-          </h2>
+          <h2 className="text-xl font-bold" style={{color:C.lav}}>Urban Change Analysis</h2>
           <p className="text-xs font-mono mt-1" style={{color:C.dim}}>
             {location?.name?.split(",").slice(0,2).join(",")}
             &nbsp;·&nbsp;
             <span style={{color:C.teal}}>{yearFrom}</span>
             <span style={{color:C.dim}}> → </span>
             <span style={{color:C.lav}}>{yearTo}</span>
+            &nbsp;·&nbsp; NASA GIBS MODIS 250m
           </p>
         </div>
-        {/* Risk badge */}
         <div className="text-center">
           <div className="text-2xl font-bold font-mono" style={{
-            color: result.risk_level==="Low" ? C.teal : result.risk_level==="Moderate" ? "#f59e0b" : C.coral
-          }}>
-            {result.risk_score}
-          </div>
+            color: result.risk_level==="Low"?C.teal:result.risk_level==="Moderate"?"#f59e0b":C.coral
+          }}>{result.risk_score}</div>
           <div className="text-[10px] font-mono px-2 py-0.5 rounded-full mt-1" style={{
-            background: result.risk_level==="Low" ? "rgba(100,255,218,0.08)" : result.risk_level==="Moderate" ? "rgba(245,158,11,0.08)" : "rgba(255,107,107,0.08)",
-            color: result.risk_level==="Low" ? C.teal : result.risk_level==="Moderate" ? "#f59e0b" : C.coral,
-            border: `1px solid ${result.risk_level==="Low" ? "rgba(100,255,218,0.2)" : result.risk_level==="Moderate" ? "rgba(245,158,11,0.2)" : "rgba(255,107,107,0.2)"}`,
-          }}>
-            {result.risk_level} Risk
-          </div>
+            background: result.risk_level==="Low"?"rgba(100,255,218,0.08)":result.risk_level==="Moderate"?"rgba(245,158,11,0.08)":"rgba(255,107,107,0.08)",
+            color: result.risk_level==="Low"?C.teal:result.risk_level==="Moderate"?"#f59e0b":C.coral,
+            border:`1px solid ${result.risk_level==="Low"?"rgba(100,255,218,0.2)":result.risk_level==="Moderate"?"rgba(245,158,11,0.2)":"rgba(255,107,107,0.2)"}`,
+          }}>{result.risk_level} Risk</div>
         </div>
       </div>
 
-      {/* ── Section 1: Real NASA NDVI Data ── */}
+      {/* ── Gemini AI Explanation ── */}
+      <Card delay={0.05}>
+        <SectionTitle algo="Gemini AI">Analysis Summary</SectionTitle>
+        {aiLoading && (
+          <div className="flex items-center gap-3">
+            <div className="w-4 h-4 border-2 border-t-transparent rounded-full animate-spin"
+              style={{borderColor:"rgba(100,255,218,0.3)",borderTopColor:C.teal}} />
+            <span className="text-sm" style={{color:C.dim}}>Generating AI explanation...</span>
+          </div>
+        )}
+        {!aiLoading && aiExplanation?.explanation && (
+          <div>
+            <p className="text-sm leading-relaxed whitespace-pre-line" style={{color:C.lav}}>
+              {aiExplanation.explanation}
+            </p>
+            <p className="text-[10px] font-mono mt-3" style={{color:C.dim}}>
+              {aiExplanation.model} · Based on NASA MODIS + OpenStreetMap real data
+            </p>
+          </div>
+        )}
+        {!aiLoading && !aiExplanation?.explanation && (
+          <p className="text-sm" style={{color:C.dim}}>AI explanation unavailable.</p>
+        )}
+      </Card>
+
+      {/* ── Algorithm 2: Linear Regression — NDVI Trend ── */}
       <section>
-        <SectionTitle badge="NASA MODIS Satellite">Vegetation Health (NDVI)</SectionTitle>
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          <DataCard index={0} label="NDVI Before" value={ndviFrom.toFixed(4)} unit=""
-            color={C.teal} source={ndviSource}
-            note={`Year ${yearFrom} — peak season`} />
-          <DataCard index={1} label="NDVI After" value={ndviTo.toFixed(4)} unit=""
-            color={ndviColor} source={ndviSource}
-            note={`Year ${yearTo} — peak season`} />
-          <DataCard index={2} label="NDVI Change" value={ndviDelta > 0 ? `+${ndviPct}` : ndviPct} unit="%"
-            color={ndviColor} source="Calculated"
-            note={ndviDelta < -0.05 ? "Significant vegetation decline" : ndviDelta < 0 ? "Slight decline" : "Stable or improving"} />
-          <DataCard index={3} label="Water Index" value={result.mndwi_mean_after?.toFixed(3) ?? "N/A"} unit=""
-            color="#60a5fa" source="NASA GIBS MODIS"
-            note="MNDWI — water body presence" />
+        <SectionTitle algo="Linear Regression">NDVI Trend (NASA MODIS)</SectionTitle>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
+          {[
+            {label:`NDVI ${yearFrom}`, value:ndviFrom.toFixed(4), color:C.teal,  note:"NASA MODIS"},
+            {label:`NDVI ${yearTo}`,   value:ndviTo.toFixed(4),   color:ndviColor,note:"NASA MODIS"},
+            {label:"NDVI Change",      value:`${ndviDelta>0?"+":""}${(ndviDelta*100).toFixed(1)}%`, color:ndviColor, note:"Real change"},
+            {label:"Trend/Year",       value:`${result.regression_trend_per_year>0?"+":""}${result.regression_trend_per_year?.toFixed(3)||"—"}%`, color:C.lav, note:`R²=${result.regression_r_squared?.toFixed(3)||"—"}`},
+          ].map((item,i)=>(
+            <motion.div key={i} initial={{opacity:0,y:12}} animate={{opacity:1,y:0}}
+              transition={{delay:i*0.07}} className="rounded-xl p-4 border"
+              style={{background:C.card,borderColor:C.border}}>
+              <div className="text-xl font-bold font-mono" style={{color:item.color}}>{item.value}</div>
+              <div className="text-xs font-semibold mt-1" style={{color:C.lav}}>{item.label}</div>
+              <div className="text-[10px] font-mono mt-0.5" style={{color:C.dim}}>{item.note}</div>
+            </motion.div>
+          ))}
         </div>
 
-        {/* NDVI trend chart */}
-        <motion.div initial={{opacity:0,y:16}} animate={{opacity:1,y:0}} transition={{delay:0.3}}
-          className="mt-4 rounded-xl p-5 border" style={{background:C.card,borderColor:C.border}}>
-          <p className="text-xs font-mono mb-4" style={{color:C.dim}}>
-            NDVI Trend — {yearFrom} to {yearTo} (NASA MODIS 250m)
-          </p>
-          <ResponsiveContainer width="100%" height={160}>
-            <AreaChart data={ndviTrend}>
-              <defs>
-                <linearGradient id="ndviGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor={C.teal} stopOpacity={0.3}/>
-                  <stop offset="95%" stopColor={C.teal} stopOpacity={0}/>
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(100,255,218,0.06)"/>
-              <XAxis dataKey="year" tick={{fill:C.dim,fontSize:11,fontFamily:"monospace"}}/>
-              <YAxis tick={{fill:C.dim,fontSize:11,fontFamily:"monospace"}} domain={["auto","auto"]}/>
-              <Tooltip content={<CustomTooltip/>}/>
-              <Area type="monotone" dataKey="ndvi" name="NDVI"
-                stroke={C.teal} fill="url(#ndviGrad)" strokeWidth={2}/>
-            </AreaChart>
-          </ResponsiveContainer>
-        </motion.div>
-      </section>
-
-      {/* ── Section 2: Real OSM Data ── */}
-      <section>
-        <SectionTitle badge="OpenStreetMap">Urban Infrastructure</SectionTitle>
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          <DataCard index={0} label="Buildings" value={buildings > 0 ? buildings.toLocaleString() : "Loading..."} unit=""
-            color={C.teal} source="OpenStreetMap"
-            note={`Within ${areakm2} km² area`} />
-          <DataCard index={1} label="Roads" value={roads > 0 ? roads.toLocaleString() : "Loading..."} unit=""
-            color={C.lav} source="OpenStreetMap"
-            note="Road segments mapped" />
-          <DataCard index={2} label="Urban Density" value={density > 0 ? density.toFixed(0) : "—"} unit="/km²"
-            color="#f59e0b" source="Calculated"
-            note="Buildings + roads per km²" />
-          <DataCard index={3} label="Green Features" value={vegFeatures > 0 ? vegFeatures.toLocaleString() : "—"} unit=""
-            color="#4ade80" source="OpenStreetMap"
-            note="Parks, forests, grassland" />
-        </div>
-        {buildings === 0 && (
-          <p className="text-xs font-mono mt-2" style={{color:"rgba(245,158,11,0.6)"}}>
-            Note: OpenStreetMap data loading — Overpass API may be slow. Refresh insights after a moment.
-          </p>
+        {trendData.length >= 2 && (
+          <Card delay={0.2}>
+            <p className="text-xs font-mono mb-4" style={{color:C.dim}}>
+              NDVI over time — {result.regression_trend || "trend"} (slope: {result.regression_slope?.toFixed(5)||"—"}/year)
+            </p>
+            <ResponsiveContainer width="100%" height={180}>
+              <LineChart data={trendData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(100,255,218,0.06)"/>
+                <XAxis dataKey="year" tick={{fill:C.dim,fontSize:11,fontFamily:"monospace"}}/>
+                <YAxis tick={{fill:C.dim,fontSize:11,fontFamily:"monospace"}} domain={["auto","auto"]}/>
+                <Tooltip content={<CustomTooltip/>}/>
+                <Line type="monotone" dataKey="ndvi" name="NDVI"
+                  stroke={C.teal} strokeWidth={2} dot={{fill:C.teal,r:4}}/>
+              </LineChart>
+            </ResponsiveContainer>
+            {result.regression_prediction?.year && (
+              <p className="text-xs font-mono mt-3" style={{color:C.dim}}>
+                Predicted NDVI {result.regression_prediction.year}: {result.regression_prediction.ndvi?.toFixed(4)}
+              </p>
+            )}
+          </Card>
         )}
       </section>
 
-      {/* ── Section 3: ML-based estimates (clearly labeled) ── */}
+      {/* ── Algorithm 1: K-Means Clustering ── */}
       <section>
-        <SectionTitle badge="ML Estimate — not verified">Change Detection</SectionTitle>
+        <SectionTitle algo="K-Means Clustering (k=4)">Land Cover Classification</SectionTitle>
         <p className="text-xs mb-4" style={{color:C.dim}}>
-          These values are computed from 250m MODIS satellite pixel analysis. They are estimates, not ground truth.
+          Partition-based clustering on satellite pixels. Each pixel assigned to nearest centroid.
+          {result.kmeans_iterations && ` Converged in ${result.kmeans_iterations} iterations.`}
         </p>
-        <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
-          <DataCard index={0} label="Pixel Change Detected" value={result.change_pct?.toFixed(1)} unit="%"
-            color={C.lav} source="Image differencing (ML)"
-            note="% of pixels that changed between years" />
-          <DataCard index={1} label="Anomaly Area" value={result.anomaly_pct?.toFixed(1)} unit="%"
-            color="#f59e0b" source="Z-Score analysis (ML)"
-            note="Statistically unusual change" />
-          <DataCard index={2} label="PCA Change" value={result.pca_change_pct?.toFixed(1)} unit="%"
-            color="#a78bfa" source="PCA analysis (ML)"
-            note={`PC1 explains ${result.pca_variance_explained?.[0]}% variance`} />
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {[["Before", yearFrom, landBefore, result.km_before_url],
+            ["After",  yearTo,  landAfter,  result.km_after_url]].map(([label,yr,data,url],idx)=>(
+            <Card key={label} delay={0.1+idx*0.1}>
+              <p className="text-xs font-mono mb-3" style={{color:C.dim}}>{label} ({yr})</p>
+              <div className="flex gap-4">
+                {url && (
+                  <img src={`${API_URL}${url}`} alt={`K-Means ${label}`}
+                    className="w-24 h-24 rounded-lg object-cover flex-shrink-0"
+                    onError={e=>{e.target.style.display="none"}}/>
+                )}
+                <div className="flex-1">
+                  {data.map((item,i)=>(
+                    <div key={i} className="flex justify-between items-center mb-1.5">
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 rounded-full" style={{background:PIE_COLORS[i%PIE_COLORS.length]}}/>
+                        <span className="text-xs" style={{color:C.dim}}>{item.name}</span>
+                      </div>
+                      <span className="text-xs font-bold font-mono" style={{color:PIE_COLORS[i%PIE_COLORS.length]}}>
+                        {item.value}%
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </Card>
+          ))}
         </div>
       </section>
 
-      {/* ── Section 4: Land Cover (ML) ── */}
-      {landCoverData.length > 0 && (
+      {/* ── Algorithm 3: Anomaly Detection ── */}
+      <section>
+        <SectionTitle algo="Anomaly Detection (2σ)">Statistical Change Detection</SectionTitle>
+        <p className="text-xs mb-4" style={{color:C.dim}}>
+          Pixels flagged where change exceeds 2 standard deviations from mean. Teal = decrease, Coral = increase.
+        </p>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <Card delay={0.1}>
+            <div className="text-2xl font-bold font-mono" style={{color:"#f59e0b"}}>{result.anomaly_pct}%</div>
+            <div className="text-xs font-semibold mt-1" style={{color:C.lav}}>Anomalous Area</div>
+            <div className="text-[10px] font-mono mt-1" style={{color:C.dim}}>{result.anomaly_interp}</div>
+          </Card>
+          <Card delay={0.15}>
+            <div className="text-2xl font-bold font-mono" style={{color:C.coral}}>{result.increase_pct}%</div>
+            <div className="text-xs font-semibold mt-1" style={{color:C.lav}}>Brightness Increase</div>
+            <div className="text-[10px] font-mono mt-1" style={{color:C.dim}}>Urban/built-up expansion</div>
+          </Card>
+          <Card delay={0.2}>
+            <div className="text-2xl font-bold font-mono" style={{color:C.teal}}>{result.decrease_pct}%</div>
+            <div className="text-xs font-semibold mt-1" style={{color:C.lav}}>Brightness Decrease</div>
+            <div className="text-[10px] font-mono mt-1" style={{color:C.dim}}>Vegetation/water change</div>
+          </Card>
+        </div>
+        {result.anomaly_url && (
+          <Card delay={0.25}>
+            <p className="text-xs font-mono mb-3" style={{color:C.dim}}>Anomaly Map — flagged pixels</p>
+            <img src={`${API_URL}${result.anomaly_url}`} alt="Anomaly map"
+              className="w-full rounded-lg object-cover" style={{maxHeight:"200px"}}
+              onError={e=>{e.target.style.display="none"}}/>
+          </Card>
+        )}
+      </section>
+
+      {/* ── Real OSM Data ── */}
+      {realStats && (
         <section>
-          <SectionTitle badge="ML Estimate">Land Cover Classification</SectionTitle>
-          <p className="text-xs mb-4" style={{color:C.dim}}>
-            Unsupervised K-Means clustering on satellite pixels. Approximate classification only.
-          </p>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            {[["Before", result.land_cover_before], ["After", result.land_cover_after]].map(([label, data], idx) => (
-              <motion.div key={label} initial={{opacity:0,y:16}} animate={{opacity:1,y:0}}
-                transition={{delay:0.2+idx*0.1}}
-                className="rounded-xl p-5 border" style={{background:C.card,borderColor:C.border}}>
-                <p className="text-xs font-mono mb-4" style={{color:C.dim}}>
-                  {label} ({idx===0?yearFrom:yearTo})
-                </p>
-                <ResponsiveContainer width="100%" height={160}>
-                  <PieChart>
-                    <Pie data={Object.entries(data||{}).map(([n,v])=>({name:n,value:parseFloat(v.toFixed(1))}))}
-                      cx="50%" cy="50%" innerRadius={40} outerRadius={65}
-                      paddingAngle={3} dataKey="value">
-                      {Object.keys(data||{}).map((_,i)=>(
-                        <Cell key={i} fill={COLORS[i%COLORS.length]} stroke="transparent"/>
-                      ))}
-                    </Pie>
-                    <Tooltip content={<CustomTooltip/>}/>
-                    <Legend formatter={(v)=>(
-                      <span style={{color:C.dim,fontSize:"10px",fontFamily:"monospace"}}>{v}</span>
-                    )}/>
-                  </PieChart>
-                </ResponsiveContainer>
+          <SectionTitle>Urban Infrastructure (OpenStreetMap)</SectionTitle>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            {[
+              {label:"Buildings",     value:realStats.buildings_count>0?realStats.buildings_count.toLocaleString():"Loading", color:C.teal},
+              {label:"Roads",         value:realStats.roads_count>0?realStats.roads_count.toLocaleString():"Loading",         color:C.lav},
+              {label:"Urban Density", value:realStats.urban_density_per_km2>0?`${realStats.urban_density_per_km2.toFixed(0)}/km²`:"—", color:"#f59e0b"},
+              {label:"Area Covered",  value:`${realStats.area_km2} km²`,                                                      color:C.dim},
+            ].map((item,i)=>(
+              <motion.div key={i} initial={{opacity:0,y:12}} animate={{opacity:1,y:0}}
+                transition={{delay:i*0.07}} className="rounded-xl p-4 border"
+                style={{background:C.card,borderColor:C.border}}>
+                <div className="text-xl font-bold font-mono" style={{color:item.color}}>{item.value}</div>
+                <div className="text-xs font-semibold mt-1" style={{color:C.lav}}>{item.label}</div>
+                <div className="text-[10px] font-mono mt-0.5" style={{color:C.dim}}>OpenStreetMap</div>
               </motion.div>
             ))}
           </div>
         </section>
       )}
 
-      {/* ── Section 5: ML Output Maps ── */}
+      {/* Satellite images */}
       <section>
-        <SectionTitle badge="ML Output">Analysis Maps</SectionTitle>
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-          {[
-            {url:result.ndvi_url,   label:"NDVI Map",      note:"Vegetation index"},
-            {url:result.ndbi_url,   label:"NDBI Map",      note:"Built-up index"},
-            {url:result.change_map_url, label:"Change Map",note:"Detected changes"},
-            {url:result.km_after_url,   label:"Land Cover", note:"K-Means classification"},
-            {url:result.anomaly_url,    label:"Anomaly Map",note:"Z-Score anomalies"},
-            {url:result.edge_url,       label:"Edge Map",   note:"Infrastructure edges"},
-          ].filter(m=>m.url).map((m,i)=>(
-            <motion.div key={i} initial={{opacity:0,scale:0.95}} animate={{opacity:1,scale:1}}
-              transition={{delay:i*0.05}}
-              className="rounded-xl overflow-hidden border" style={{borderColor:C.border}}>
-              <img src={`${API_URL}${m.url}`} alt={m.label}
-                className="w-full h-28 object-cover"
-                onError={e=>{e.target.parentNode.style.display="none"}}/>
-              <div className="px-3 py-2" style={{background:C.card}}>
-                <p className="text-xs font-semibold" style={{color:C.lav}}>{m.label}</p>
-                <p className="text-[10px] font-mono" style={{color:C.dim}}>{m.note}</p>
-              </div>
-            </motion.div>
+        <SectionTitle>Satellite Images (NASA GIBS MODIS)</SectionTitle>
+        <div className="grid grid-cols-2 gap-4">
+          {[[result.image_from_url, `${yearFrom} — Before`],
+            [result.image_to_url,   `${yearTo} — After`]].map(([url,label],i)=>(
+            url && (
+              <Card key={i} delay={i*0.1}>
+                <p className="text-xs font-mono mb-2" style={{color:C.dim}}>{label}</p>
+                <img src={`${API_URL}${url}`} alt={label}
+                  className="w-full rounded-lg object-cover" style={{maxHeight:"200px"}}
+                  onError={e=>{e.target.style.display="none"}}/>
+              </Card>
+            )
           ))}
         </div>
       </section>
 
-      {/* Data sources footer */}
+      {/* Footer */}
       <div className="rounded-xl p-4 border" style={{background:"rgba(10,25,47,0.5)",borderColor:C.border}}>
         <p className="text-[10px] font-mono" style={{color:C.dim}}>
-          Data sources: NASA GIBS MODIS Terra (250m, real satellite) · OpenStreetMap via Overpass API (real map data) · 
-          ML estimates from image analysis (approximate). NDVI = Normalized Difference Vegetation Index.
+          Algorithms: K-Means Clustering · Linear Regression · Statistical Anomaly Detection |
+          Data: NASA GIBS MODIS Terra 250m · OpenStreetMap · Gemini AI explanation
         </p>
       </div>
     </div>

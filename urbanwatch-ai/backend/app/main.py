@@ -8,7 +8,7 @@ from fastapi.staticfiles import StaticFiles
 import os
 
 from app.config import settings
-from app.routes import satellite, detection, stats, analyze, real_stats
+from app.routes import satellite, detection, stats, analyze, real_stats, explain
 
 app = FastAPI(
     title="UrbanWatch AI API",
@@ -35,6 +35,7 @@ app.include_router(detection.router, tags=["Detection"])
 app.include_router(stats.router, tags=["Stats"])
 app.include_router(analyze.router, tags=["Analysis"])
 app.include_router(real_stats.router, tags=["Real Data"])
+app.include_router(explain.router, tags=["AI Explanation"])
 
 
 @app.get("/health")

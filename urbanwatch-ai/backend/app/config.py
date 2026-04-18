@@ -14,6 +14,9 @@ class Settings(BaseSettings):
     # NASA Earthdata
     nasa_earthdata_token: str = ""
 
+    # Gemini AI
+    gemini_api_key: str = ""
+
     # App
     cors_origins: str = "http://localhost:3000"
     port: int = 8000
