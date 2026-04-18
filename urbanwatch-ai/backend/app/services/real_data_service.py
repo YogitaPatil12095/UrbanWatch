@@ -151,9 +151,34 @@ async def fetch_osm_change_estimate(
 
 async def fetch_modis_ndvi(lat: float, lon: float, year_from: int, year_to: int) -> dict:
     """
-    Fetch real NDVI using NASA GIBS pixel analysis.
-    AppEEARS disabled due to permission requirements.
+    Fetch real NDVI.
+    Priority: Copernicus Sentinel-2 true NDVI (B08/B04) → NASA GIBS fallback
     """
+    from app.config import settings
+
+    if settings.sentinelhub_client_id:
+        try:
+            from app.services.copernicus_service import compute_ndvi_sentinel2
+            import asyncio
+            r_from, r_to = await asyncio.gather(
+                compute_ndvi_sentinel2(lat, lon, year_from),
+                compute_ndvi_sentinel2(lat, lon, year_to),
+            )
+            if r_from and r_to:
+                ndvi_from = r_from["ndvi"]
+                ndvi_to   = r_to["ndvi"]
+                print(f"[Copernicus] True NDVI: {ndvi_from:.4f} → {ndvi_to:.4f}")
+                return {
+                    "ndvi_from":  ndvi_from,
+                    "ndvi_to":    ndvi_to,
+                    "ndvi_delta": round(ndvi_to - ndvi_from, 4),
+                    "source":     "Sentinel-2 L2A true NDVI (B08/B04) via Copernicus",
+                    "resolution": "10m",
+                    "real":       True,
+                }
+        except Exception as e:
+            print(f"[Copernicus NDVI] Failed: {e}")
+
     return await _gibs_ndvi_fallback(lat, lon, year_from, year_to)
 
 

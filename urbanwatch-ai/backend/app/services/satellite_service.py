@@ -157,7 +157,23 @@ async def fetch_satellite_image(lat: float, lon: float, year: int) -> dict:
             "lon": lon,
         }
 
-    # 1. NASA GIBS — free, real satellite data, no key needed
+    # 1. Copernicus Sentinel-2 (10m, true color, most accurate)
+    if settings.sentinelhub_client_id:
+        try:
+            from app.services.copernicus_service import fetch_sentinel2_image
+            result = await fetch_sentinel2_image(lat, lon, year)
+            if result:
+                # Copy to standard cache path
+                import shutil
+                src = Path("." + result["image_url"])
+                if src.exists():
+                    shutil.copy(src, cache_path)
+                print(f"[Copernicus] Sentinel-2 10m image for {year}")
+                return {**result, "image_url": f"/static/images/sat_{cache_key}.jpg"}
+        except Exception as e:
+            print(f"[Copernicus] Failed: {e}")
+
+    # 2. NASA GIBS — free, real satellite data, no key needed
     try:
         result = await _fetch_nasa_gibs(lat, lon, year, cache_path)
         if result:
